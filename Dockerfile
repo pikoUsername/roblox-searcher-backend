@@ -1,14 +1,11 @@
-FROM joyzoursky/python-chromedriver:3.9
+FROM python:latest
 
 ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends netcat && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
+RUN apt-get update
 COPY pyproject.toml poetry.lock ./
 RUN pip install poetry && \
     poetry config virtualenvs.in-project true && \
@@ -16,4 +13,4 @@ RUN pip install poetry && \
 
 COPY . ./
 
-CMD poetry run python -m app
+CMD poetry run python -m app web --debug
