@@ -16,7 +16,7 @@ def load_routes(app: FastAPI):
 
 
 logger = get_logger()
-router = APIRouter(prefix="/app")
+router = APIRouter(prefix="/api")
 
 
 def form_batch_request(users: list[dict]) -> list[dict]:
