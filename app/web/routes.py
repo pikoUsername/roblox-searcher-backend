@@ -62,7 +62,7 @@ async def create_token(request: Request, expiry_minutes: int = 60, token_repo: I
 	}
 
 
-@router.get("/search/player/{player_name}", dependencies=[Depends(get_token)])
+@router.get("/search/player/{player_name}")
 async def search_player(
 	player_name: str,
 	redis: Redis = Depends(get_redis),
@@ -98,7 +98,7 @@ async def search_player(
 	return data
 
 
-@router.get("/search/{game_id}/gamepass", dependencies=[Depends(get_token)])
+@router.get("/search/{game_id}/gamepass")
 async def search_gamepass_by_id(
 	game_id: int,
 	redis: Redis = Depends(get_redis),
