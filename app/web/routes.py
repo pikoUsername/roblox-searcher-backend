@@ -76,7 +76,7 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = await client.get(f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=20")
+	response = await client.get(f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
 	if response.status == 429:
 		logger.error("No search user response")
 		raise HTTPException(detail="Rate limit exceeded", status_code=429)
