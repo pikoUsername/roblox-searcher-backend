@@ -13,8 +13,12 @@ from app.services.db import get_db_conn
 from app.settings import get_settings
 from app.web.db import setup_engine, sa_session_factory
 from app.web.interfaces import ITokenRepository
+from app.web.logger import get_logger
 from app.web.repos import TokenRepository
 from app.web.websettings import WebSettings, get_web_settings
+
+
+logger = get_logger(__name__)
 
 
 async def session_provider(settings: WebSettings = Depends(get_web_settings)) -> AsyncSession:
@@ -52,6 +56,10 @@ async def get_redis() -> Redis:
 
 async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_repo)) -> aiohttp.ClientSession:
 	settings = get_settings()
+	token = await token_repo.fetch_token()
+	if not token:
+		raise ValueError("No token is present in database")
+	logger.info(f"Token has been selected, {token[0:150]}")
 	client = aiohttp.ClientSession(
 		headers={
 			'user-agent': settings.user_agent,

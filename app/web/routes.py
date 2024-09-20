@@ -76,10 +76,10 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = await client.get(f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=25")
+	response = await client.get(f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=20")
 	if response.status == 429:
 		logger.error("No search user response")
-		return
+		raise HTTPException(detail="Rate limit exceeded", status_code=429)
 	_data = await response.json()
 	logger.info(_data)
 	users = _data["data"]
@@ -87,9 +87,8 @@ async def search_player(
 	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_batch_request(users))
 	if batch_response.status == 429:
 		logger.error("No batch response")
-		return
+		raise HTTPException(detail="Rate limit exceeded", status_code=429)
 	_data = await batch_response.json()
-	logger.info(_data)
 	data = form_users_response(users, _data["data"])
 
 	logger.info(f"lset is placed in players_{player_name}")
