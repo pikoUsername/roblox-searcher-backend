@@ -58,14 +58,14 @@ async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_
 	settings = get_settings()
 	token = await token_repo.fetch_token()
 	if not token:
-		raise ValueError("No token is present in database")
+		logger.warning("Token will be empty")
 	logger.info(f"Token has been selected, {token[0:150]}")
 	client = aiohttp.ClientSession(
 		headers={
 			'user-agent': settings.user_agent,
 		},
 		cookies={
-			".ROBLOSECURITY": await token_repo.fetch_token(),
+			".ROBLOSECURITY": token,
 		}
 	)
 	yield client
