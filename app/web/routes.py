@@ -164,7 +164,7 @@ async def search_game(
 	return player_games
 
 
-@router.post("/buy_robux")
+@router.post("/buy_robux", response_model=TransactionScheme)
 async def buy_robux(
 	data: BuyRobuxScheme,
 	redis: Redis = Depends(get_redis),

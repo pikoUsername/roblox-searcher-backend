@@ -1,4 +1,4 @@
-from typing import Annotated, Generator
+from typing import Annotated, Generator, Tuple
 from uuid import UUID
 
 import aiohttp
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.providers import get_token_service
 from app.repos import UserTokenRepository
 from app.services.db import get_db_conn
+from app.services.interfaces import BasicDBConnector
 from app.settings import get_settings
 from app.web.db import setup_engine, sa_session_factory
 from app.web.interfaces import ITokenRepository
@@ -36,14 +37,11 @@ async def token_repo_provider(session: AsyncSession = Depends(session_provider))
 	return TokenRepository(session)
 
 
-async def get_roblox_token_repo() -> UserTokenRepository:
+async def get_roblox_token_repo() -> Tuple[UserTokenRepository, BasicDBConnector]:
 	settings = get_settings()
 	connection = await get_db_conn(settings.db_dsn.replace("+asyncpg", ""))
-	try:
-		yield await get_token_service(settings, connection)
-	finally:
-		await connection.close()
-
+	token_service = await get_token_service(settings, connection)
+	return token_service, connection
 
 async def get_redis() -> Redis:
 	settings = get_web_settings()
@@ -57,7 +55,7 @@ async def get_redis() -> Redis:
 def client_provider() -> aiohttp.ClientSession: ...
 
 
-async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_repo)) -> aiohttp.ClientSession:
+async def get_client(token_repo: UserTokenRepository) -> aiohttp.ClientSession:
 	settings = get_settings()
 	token = await token_repo.fetch_token()
 	if not token:
@@ -71,9 +69,7 @@ async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_
 			".ROBLOSECURITY": token,
 		}
 	)
-	yield client
-
-	await client.close()
+	return client
 
 
 async def get_token(
