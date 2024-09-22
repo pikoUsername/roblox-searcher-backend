@@ -41,8 +41,8 @@ def lifespan() -> Callable:
 async def get_app(debug: bool = True) -> FastAPI:
 	load_dotenv()
 
-
-	app = FastAPI(debug=debug, lifespan=lifespan())
+	app = FastAPI(
+		debug=debug, lifespan=lifespan(), docs_url="/api/docs", openapi_url="/api/openapi.json")
 
 	websettings = get_web_settings()
 
