@@ -2,10 +2,12 @@ from typing import Annotated, Generator, Tuple
 from uuid import UUID
 
 import aiohttp
+from aiohttp import CookieJar
 from fastapi import Depends, HTTPException, Request
 from fastapi.params import Header
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
+from yarl import URL
 
 from app.providers import get_token_service
 from app.repos import UserTokenRepository
@@ -57,19 +59,19 @@ def client_provider(request: Request) -> aiohttp.ClientSession:
 	return request.app.state.client_session
 
 
-def get_client(token: str) -> aiohttp.ClientSession:
+def get_client( token: str) -> aiohttp.ClientSession:
 	settings = get_settings()
 
 	if not token:
 		logger.warning("Token will be empty")
 	logger.info(f"Token has been selected, {token[0:150]}")
+	cookie_jar = CookieJar(unsafe=True)
+	cookie_jar.update_cookies({".ROBLOSECURITY": token}, response_url=URL("roblox.com"))
 	client = aiohttp.ClientSession(
 		headers={
 			'User-Agent': settings.user_agent,
 		},
-		cookies={
-			".ROBLOSECURITY": token,
-		}
+		cookie_jar=cookie_jar
 	)
 	return client
 
