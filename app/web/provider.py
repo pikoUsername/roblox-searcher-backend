@@ -54,6 +54,9 @@ async def get_redis() -> Redis:
 		await redis.close()
 
 
+def client_provider() -> aiohttp.ClientSession: ...
+
+
 async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_repo)) -> aiohttp.ClientSession:
 	settings = get_settings()
 	token = await token_repo.fetch_token()
@@ -62,7 +65,7 @@ async def get_client(token_repo: UserTokenRepository = Depends(get_roblox_token_
 	logger.info(f"Token has been selected, {token[0:150]}")
 	client = aiohttp.ClientSession(
 		headers={
-			'user-agent': settings.user_agent,
+			'User-Agent': settings.user_agent,
 		},
 		cookies={
 			".ROBLOSECURITY": token,

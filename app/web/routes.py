@@ -1,14 +1,20 @@
 import json
+import random
 from datetime import datetime
 
 from aiohttp import ClientSession
 from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException
 from redis.asyncio import Redis
 
+from app.providers import get_publisher
+from app.services.queue.publisher import BasicMessageSender
 from app.web.interfaces import ITokenRepository
 from app.web.logger import get_logger
-from app.web.provider import token_repo_provider, get_token, get_redis, get_client
-from app.web.schemas import GamePassInfo, PlayerData
+from app.web.provider import token_repo_provider, get_redis, client_provider
+from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, RobuxBuyServiceScheme
+
+
+# невроятный говнокод
 
 
 def load_routes(app: FastAPI):
@@ -66,7 +72,7 @@ async def create_token(request: Request, expiry_minutes: int = 60, token_repo: I
 async def search_player(
 	player_name: str,
 	redis: Redis = Depends(get_redis),
-	client: ClientSession = Depends(get_client)
+	client: ClientSession = Depends(client_provider)
 ) -> list[PlayerData] | None:
 	result = await redis.get(f"players_{player_name}")
 
@@ -101,7 +107,7 @@ async def search_player(
 async def search_gamepass_by_id(
 	game_id: int,
 	redis: Redis = Depends(get_redis),
-	client: ClientSession = Depends(get_client)
+	client: ClientSession = Depends(client_provider)
 ) -> list[GamePassInfo] | None:
 	result = await redis.get(f"game_{game_id}")
 
@@ -131,6 +137,92 @@ async def search_gamepass_by_id(
 	await redis.set(f"game_{game_id}", json.dumps(gamepasses))
 
 	return data
+
+
+@router.get("/search/games")
+async def search_game(
+	player_id: int,
+	redis: Redis = Depends(get_redis),
+	client: ClientSession = Depends(client_provider)
+) -> list[GameInfo]:
+	player_games = await redis.get(f"player_game_{player_id}")
+
+	if not player_games:
+		logger.info("Found games from redis cache")
+		result = json.loads(player_games)
+		return [GameInfo(**v) for v in result]
+	response = await client.get(f"https://games.roblox.com/v2/users/{player_id}/games")
+	if response.status == 429:
+		logger.warning("Rate limit reached")
+		return []
+	data: list[dict] = (await response.json())['data']
+	player_games = [GameInfo(**v) for v in data]
+
+	logger.info(f"Lset to player_game_{player_id}")
+	await redis.set(f"player_game_{player_id}", json.dumps(player_games))
+
+	return player_games
+
+
+@router.post("/buy_robux")
+async def buy_robux(
+	data: BuyRobuxScheme,
+	redis: Redis = Depends(get_redis),
+	client: ClientSession = Depends(client_provider),
+	publisher: BasicMessageSender = Depends(get_publisher)
+) -> TransactionScheme | None:
+	# searches in persons game a gamepass that match given robux amount!
+	gamepasses = await redis.get(f"game_{data.game_id}")
+
+	if not gamepasses:
+		# поебать
+		universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
+		if universe_response.status == 429:
+			logger.error("No universe response")
+			return
+
+		_data = await universe_response.json()
+
+		universe_id = _data["universeId"]
+		response = await client.get(
+			f"https://games.roblox.com/v1/games/{universe_id}/game-passes?limit=100&sortOrder=1")
+
+		if response.status == 429:
+			logger.error("No gamepass response")
+			return
+
+		_temp: list[dict] = (await response.json())['data']
+		gamepasses = [GamePassInfo(**v) for v in gamepasses]
+
+		logger.info(f"Lset to game_{data.game_id}")
+		await redis.set(f"game_{data.game_id}", json.dumps(gamepasses))
+	else:
+		_temp: list[dict] = json.loads(gamepasses)
+		gamepasses = [GamePassInfo(**v) for v in _temp]
+
+	found_gamepass: GamePassInfo | None = None
+	for game_pass in gamepasses:
+		if game_pass.price == data.robux_amount and found_gamepass.sellerName == data.roblox_username:
+			found_gamepass = game_pass
+
+	if not found_gamepass:
+		return
+
+	logger.info("Sending transaction!!!!!")
+	publisher.send_message(
+		RobuxBuyServiceScheme(
+			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
+			tx_id=1,
+			price=int(data.robux_amount),
+		).dict()
+	)
+	logger.info("WAITING")
+	return TransactionScheme(
+		id=random.randint(0, 10),
+		roblox_name=found_gamepass.sellerName,
+		robux_amount=data.robux_amount,
+		paid_amount=data.paid_amount,
+	)
 
 
 _start_time = datetime.now()
