@@ -65,3 +65,9 @@ class RobuxBuyServiceScheme(BaseModel):
     url: str
     price: int
     tx_id: int
+
+
+class BuyRobuxesThroghUrl(BaseModel):
+    url: str
+    amount: int
+    roblox_username: str

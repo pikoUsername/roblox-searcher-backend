@@ -13,7 +13,8 @@ from app.services.validators import validate_game_pass_url
 from app.web.interfaces import ITokenRepository
 from app.web.logger import get_logger
 from app.web.provider import token_repo_provider, get_redis, client_provider
-from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, RobuxBuyServiceScheme
+from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
+	RobuxBuyServiceScheme, BuyRobuxesThroghUrl
 
 
 # невроятный говнокод
@@ -227,29 +228,27 @@ async def buy_robux(
 	)
 
 
-@router.post("/buy_robux/url", response_model=TransactionScheme)
+@router.post("/buy_robux/url")
 async def buy_robux_by_url(
-	url: str = Body(),
-	amount: int = Body(),
-	roblox_username: str = Body(),
+	data: BuyRobuxesThroghUrl,
 	publisher: BasicMessageSender = Depends(get_publisher)
 ) -> TransactionScheme | None:
-	if not validate_game_pass_url(url):
+	if not validate_game_pass_url(data.url):
 		raise HTTPException(status_code=400, detail="Не правильный url")
 	logger.info("Sending transaction!!!!!")
 	publisher.send_message(
 		RobuxBuyServiceScheme(
-			url=url,
+			url=data.url,
 			tx_id=1,
-			price=amount,
+			price=data.amount,
 		).dict()
 	)
 	logger.info("WAITING")
 	return TransactionScheme(
 		id=random.randint(0, 10) + random.randint(0, 100),
-		roblox_name=roblox_username,
-		robux_amount=amount,
-		paid_amount=Decimal(amount * 0.7),
+		roblox_name=data.roblox_username,
+		robux_amount=data.amount,
+		paid_amount=Decimal(data.amount * 0.7),
 	)
 
 
