@@ -1,13 +1,15 @@
 import json
 import random
 from datetime import datetime
+from decimal import Decimal
 
 from aiohttp import ClientSession
-from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException
+from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException, Body
 from redis.asyncio import Redis
 
 from app.providers import get_publisher
 from app.services.queue.publisher import BasicMessageSender
+from app.services.validators import validate_game_pass_url
 from app.web.interfaces import ITokenRepository
 from app.web.logger import get_logger
 from app.web.provider import token_repo_provider, get_redis, client_provider
@@ -222,6 +224,32 @@ async def buy_robux(
 		roblox_name=found_gamepass.sellerName,
 		robux_amount=data.robux_amount,
 		paid_amount=data.paid_amount,
+	)
+
+
+@router.post("/buy_robux/url", response_model=TransactionScheme)
+async def buy_robux_by_url(
+	url: str = Body(),
+	amount: int = Body(),
+	roblox_username: str = Body(),
+	publisher: BasicMessageSender = Depends(get_publisher)
+) -> TransactionScheme | None:
+	if not validate_game_pass_url(url):
+		raise HTTPException(status_code=400, detail="Не правильный url")
+	logger.info("Sending transaction!!!!!")
+	publisher.send_message(
+		RobuxBuyServiceScheme(
+			url=url,
+			tx_id=1,
+			price=amount,
+		).dict()
+	)
+	logger.info("WAITING")
+	return TransactionScheme(
+		id=random.randint(0, 10) + random.randint(0, 100),
+		roblox_name=roblox_username,
+		robux_amount=amount,
+		paid_amount=Decimal(amount * 0.7),
 	)
 
 
