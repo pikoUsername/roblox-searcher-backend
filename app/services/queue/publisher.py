@@ -8,6 +8,7 @@ from typing import Dict
 from typing import Optional
 
 from loguru import logger
+from pika.exchange_type import ExchangeType
 from pydantic import BaseModel, validator
 
 import pika
@@ -71,7 +72,7 @@ class BasicPikaClient:
                 time.sleep(5)
                 tries += 1
                 logger.info(f"Trying to reconnect to RabbitMQ server, tries # {tries}")
-                if tries == 20:
+                if tries == 4:
                     raise AMQPConnectionError(e)
 
     def _init_connection_parameters(self):
@@ -102,12 +103,9 @@ class BasicPikaClient:
         self.channel.queue_declare(
             queue=queue_name,
             exclusive=exclusive,
-            durable=True,
-            auto_delete=False,
-            passive=False,
         )
 
-    def declare_exchange(self, exchange_name: str, exchange_type: str = "direct"):
+    def declare_exchange(self, exchange_name: str, exchange_type: str = ExchangeType.direct):
         self.check_connection()
         self.channel.exchange_declare(
             exchange=exchange_name,

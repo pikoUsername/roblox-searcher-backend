@@ -21,9 +21,9 @@ def get_publisher():
 
 	publisher = BasicMessageSender(
 		settings.queue_dsn,
-		queue=settings.send_queue_name,
-		exchange=settings.send_queue_exchange_name,
-		routing=settings.send_queue_name,
+		queue=settings.queue_name,
+		exchange=settings.exchange_name,
+		routing=settings.queue_name,
 	)
 
 	publisher.connect()

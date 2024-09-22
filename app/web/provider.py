@@ -2,7 +2,7 @@ from typing import Annotated, Generator, Tuple
 from uuid import UUID
 
 import aiohttp
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.params import Header
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,12 +53,13 @@ async def get_redis() -> Redis:
 		await redis.close()
 
 
-def client_provider() -> aiohttp.ClientSession: ...
+def client_provider(request: Request) -> aiohttp.ClientSession:
+	return request.app.state.client_session
 
 
-async def get_client(token_repo: UserTokenRepository) -> aiohttp.ClientSession:
+def get_client(token: str) -> aiohttp.ClientSession:
 	settings = get_settings()
-	token = await token_repo.fetch_token()
+
 	if not token:
 		logger.warning("Token will be empty")
 	logger.info(f"Token has been selected, {token[0:150]}")

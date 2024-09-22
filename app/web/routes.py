@@ -192,17 +192,17 @@ async def buy_robux(
 			return
 
 		_temp: list[dict] = (await response.json())['data']
-		gamepasses = [GamePassInfo(**v) for v in gamepasses]
+		gamepasses = [GamePassInfo(**v) for v in _temp]
 
 		logger.info(f"Lset to game_{data.game_id}")
-		await redis.set(f"game_{data.game_id}", json.dumps(gamepasses))
+		await redis.set(f"game_{data.game_id}", json.dumps([x.dict() for x in gamepasses]))
 	else:
 		_temp: list[dict] = json.loads(gamepasses)
 		gamepasses = [GamePassInfo(**v) for v in _temp]
 
 	found_gamepass: GamePassInfo | None = None
 	for game_pass in gamepasses:
-		if game_pass.price == data.robux_amount and found_gamepass.sellerName == data.roblox_username:
+		if game_pass.price == data.robux_amount and game_pass.sellerName == data.roblox_username:
 			found_gamepass = game_pass
 
 	if not found_gamepass:
@@ -218,7 +218,7 @@ async def buy_robux(
 	)
 	logger.info("WAITING")
 	return TransactionScheme(
-		id=random.randint(0, 10),
+		id=random.randint(0, 10) + random.randint(0, 100),
 		roblox_name=found_gamepass.sellerName,
 		robux_amount=data.robux_amount,
 		paid_amount=data.paid_amount,
