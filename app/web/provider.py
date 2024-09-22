@@ -43,6 +43,7 @@ async def get_roblox_token_repo() -> Tuple[UserTokenRepository, BasicDBConnector
 	token_service = await get_token_service(settings, connection)
 	return token_service, connection
 
+
 async def get_redis() -> Redis:
 	settings = get_web_settings()
 	redis = Redis(host=settings.redis_host, port=settings.redis_port)

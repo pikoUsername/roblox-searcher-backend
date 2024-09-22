@@ -1,6 +1,7 @@
+from fastapi import Depends
 from loguru import logger
 
-from app.settings import Settings
+from app.settings import Settings, get_settings
 from app.repos import UserTokenRepository
 from app.services.interfaces import BasicDBConnector
 from app.services.queue.publisher import BasicMessageSender
@@ -14,7 +15,8 @@ async def get_token_service(settings: Settings, connection: BasicDBConnector) ->
 	return token_service
 
 
-def get_publisher(settings: Settings):
+def get_publisher():
+	settings = get_settings()
 	logger.info("Setting up basicMessageSender")
 
 	publisher = BasicMessageSender(
