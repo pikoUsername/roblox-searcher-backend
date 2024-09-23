@@ -38,7 +38,7 @@ async def auth_browser(driver: WebDriver, token_service: UserTokenRepository) ->
 	logger.info("First token has been taken")
 
 	token = await token_service.fetch_token()
-	if token is None:
+	if not token:
 		logger.warning("Tokens are not available running without token!!!")
 		return
 
