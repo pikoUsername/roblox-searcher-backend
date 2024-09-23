@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List, TYPE_CHECKING
+from typing import Optional, Dict, Any, List
 
 import sqlite3
 from asyncpg import Pool, Connection, Record

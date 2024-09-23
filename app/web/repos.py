@@ -1,6 +1,5 @@
 import uuid
 from datetime import datetime, timedelta
-from typing import Sequence
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
