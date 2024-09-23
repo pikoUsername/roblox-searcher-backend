@@ -6,6 +6,7 @@ from aiohttp import CookieJar
 from fastapi import Depends, HTTPException, Request
 from fastapi.params import Header
 from redis.asyncio import Redis
+from seleniumrequests import Firefox
 from sqlalchemy.ext.asyncio import AsyncSession
 from yarl import URL
 
@@ -59,7 +60,11 @@ def client_provider(request: Request) -> aiohttp.ClientSession:
 	return request.app.state.client_session
 
 
-def get_client( token: str) -> aiohttp.ClientSession:
+def requests_driver_provider(request: Request) -> Firefox:
+	return request.app.state.driver
+
+
+def get_client(token: str) -> aiohttp.ClientSession:
 	settings = get_settings()
 
 	if not token:

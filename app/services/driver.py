@@ -5,6 +5,7 @@ from loguru import logger
 from selenium.common import StaleElementReferenceException
 from selenium.webdriver.firefox.service import Service as GeckoService
 from selenium.webdriver.remote.webdriver import WebDriver
+from seleniumrequests import Firefox
 from seleniumwire import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.firefox import GeckoDriverManager
@@ -71,12 +72,27 @@ def get_driver(settings: "Settings") -> WebDriver:
         agent = settings.user_agent
         opts.add_argument(agent)
 
-        service = GeckoService(GeckoDriverManager(path="./drivers/").install())
+        service = GeckoService(GeckoDriverManager().install())
         driver = webdriver.Firefox(service=service, options=opts)
     else:
         raise NotImplementedError(f"{settings.browser} is not yet implemented")
 
     return driver
+
+
+def get_requests_driver(settings: "Settings") -> Firefox:
+    logger.info("Setting up requests firefox browser")
+
+    opts = webdriver.FirefoxOptions()
+    opts.add_argument("--disable-web-security")
+    if not settings.debug:
+        opts.add_argument("--headless")
+        opts.add_argument("--disable-gpu")
+    agent = settings.user_agent
+    opts.add_argument(agent)
+
+    service = GeckoService(GeckoDriverManager().install())
+    return Firefox(service=service, options=opts)
 
 
 def convert_browser_cookies_to_aiohttp(cookies: List[Dict[str, Any]]) -> Dict[str, Any]:

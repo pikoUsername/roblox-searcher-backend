@@ -10,9 +10,8 @@ from aiohttp import ClientSession
 from dotenv import load_dotenv
 from fastapi import FastAPI
 
-from app.providers import get_token_service
-from app.repos import UserTokenRepository
-from app.services.db import get_db_conn
+from app.browser import auth_browser
+from app.services.driver import get_requests_driver
 from app.settings import get_settings
 from app.web.db import get_db_session, registry
 from app.web.logger import configure_logging, LoggingSettings
@@ -30,10 +29,15 @@ def lifespan() -> Callable:
 		token = await token_repo.fetch_token()
 
 		aiohttp_client = get_client(token)
+		settings = get_settings()
+		driver = get_requests_driver(settings)
+		await auth_browser(driver, token_service=token_repo)
 		try:
 			app.state.client_session = aiohttp_client
+			app.state.driver = driver
 			yield
 		finally:
+			app.state.driver.close()
 			await app.state.client_session.close()
 	return inner
 

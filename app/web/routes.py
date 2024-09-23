@@ -6,13 +6,14 @@ from decimal import Decimal
 from aiohttp import ClientSession
 from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException, Body
 from redis.asyncio import Redis
+from seleniumrequests import Firefox
 
 from app.providers import get_publisher
 from app.services.queue.publisher import BasicMessageSender
 from app.services.validators import validate_game_pass_url
 from app.web.interfaces import ITokenRepository
 from app.web.logger import get_logger
-from app.web.provider import token_repo_provider, get_redis, client_provider
+from app.web.provider import token_repo_provider, get_redis, client_provider, requests_driver_provider
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl
 
@@ -75,6 +76,7 @@ async def create_token(request: Request, expiry_minutes: int = 60, token_repo: I
 async def search_player(
 	player_name: str,
 	redis: Redis = Depends(get_redis),
+	driver_requests: Firefox = Depends(requests_driver_provider),
 	client: ClientSession = Depends(client_provider)
 ) -> list[PlayerData] | None:
 	result = await redis.get(f"players_{player_name}")
@@ -85,12 +87,12 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = await client.get(f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10", cookies={})
-	if response.status == 429:
+	response = driver_requests.request("GET", f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
+	if response.status_code == 429:
 		logger.error("No search user response")
 		raise HTTPException(detail="Rate limit exceeded", status_code=429)
-	_data = await response.json()
-	logger.info(_data)
+	_data = response.json()
+	logger.info(str(_data)[0:200])
 	users = _data["data"]
 
 	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_batch_request(users))

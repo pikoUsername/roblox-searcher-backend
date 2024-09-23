@@ -39,7 +39,8 @@ async def auth_browser(driver: WebDriver, token_service: UserTokenRepository) ->
 
 	token = await token_service.fetch_token()
 	if token is None:
-		raise ValueError("Tokens are unavailable")
+		logger.warning("Tokens are not available running without token!!!")
+		return
 
 	logger.info("Starting authentication to roblox.com")
 
