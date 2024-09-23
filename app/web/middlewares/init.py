@@ -13,10 +13,7 @@ def load_middlewares(
         app: FastAPI,
         debug: bool = False
 ) -> None:
-    if debug:
-        # дает разрешение отправлять любым хостам на бекенд свои запросы.
-        # что очень не безапасно
-        origins.append("*")
+    origins.append("*")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
