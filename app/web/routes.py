@@ -276,8 +276,22 @@ async def robux_amount(
 	if response:
 		return int(response)
 
-	robux = driver_requests.find_element(By.ID, "nav-robux-amount")
-	robux = int(robux.text)
+	user_id = await redis.get("bot_user_id")
+	if not user_id:
+		logger.info('Starting to execute a plans')
+		driver_requests.get("https://roblox.com")
+		raw_response = driver_requests.execute_script("return window.localStorage.getItem('PresenceData');")
+		logger.info(f"Raw response: {raw_response}")
+		response = json.loads(raw_response['value'])
+		if not response:
+			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
+		data = response.values()[0]['data']['userPresences']
+		user_id = data['userId']
+		await redis.set("bot_user_id", user_id)
+	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
+	if response.status_code != 200:
+		raise HTTPException(detail="Cannot get robux amount", status_code=response.status_code)
+	robux = response.json()['robux']
 
 	await redis.set("bot_current_amount", robux)
 	await redis.expire("bot_current_amount", 3600)
