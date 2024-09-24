@@ -37,7 +37,6 @@ def lifespan() -> Callable:
 			app.state.driver = driver
 			yield
 		finally:
-			app.state.driver.close()
 			await app.state.client_session.close()
 	return inner
 

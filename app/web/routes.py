@@ -35,9 +35,10 @@ def form_games_batch_request(game_ids: list[int]) -> list[dict]:
 		result.append({
 			"requestId": f"{id}::GameThumbnail:768x432:webp:regular",
 			"format": "webp",
-			"size": "246x246",
+			"size": "768x432",
 			"targetId": id,
-			"type": "AvatarHeadshot",
+			"token": "",
+			"type": "GameThumbnail",
 		})
 	return result
 
@@ -165,7 +166,7 @@ async def search_game(
 ) -> list[GameInfo]:
 	player_games = await redis.get(f"player_game_{player_id}")
 
-	if not player_games:
+	if player_games:
 		logger.info("Found games from redis cache")
 		result = json.loads(player_games)
 		return [GameInfo(**v) for v in result]
@@ -183,6 +184,7 @@ async def search_game(
 
 	player_games = []
 
+	logger.info(batch_data)
 	for image, game in zip(batch_data, data):
 		player_games.append(
 			GameInfo(
@@ -193,7 +195,8 @@ async def search_game(
 		)
 
 	logger.info(f"Lset to player_game_{player_id}")
-	await redis.set(f"player_game_{player_id}", json.dumps(player_games))
+	logger.info(f"Player games: {player_games}")
+	await redis.set(f"player_game_{player_id}", json.dumps([x.dict() for x in player_games]))
 
 	return player_games
 
