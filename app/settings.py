@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     db_tokens_table: str
     queue_dsn: str
 
-    window_size: str = "1920,1080"
+    window_size: str = "1920,900"
 
     send_queue_name: str = DEFAULT_SEND_NAME
     queue_name: str = DEFAULT_QUEUE_NAME

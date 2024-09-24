@@ -85,8 +85,6 @@ def get_requests_driver(settings: "Settings") -> Firefox:
 
     opts = webdriver.FirefoxOptions()
     opts.add_argument("--disable-web-security")
-    opts.add_argument(f"--width={settings.window_size.split(',')[0]}")
-    opts.add_argument(f"--height={settings.window_size.split(',')[1]}")
     if not settings.debug:
         opts.add_argument("--headless")
         opts.add_argument("--disable-gpu")
@@ -94,7 +92,9 @@ def get_requests_driver(settings: "Settings") -> Firefox:
     opts.add_argument(agent)
 
     service = GeckoService(GeckoDriverManager().install())
-    return Firefox(service=service, options=opts)
+    driver = Firefox(service=service, options=opts)
+    driver.set_window_size(int(settings.window_size.split(',')[0]), int(settings.window_size.split(',')[1]))
+    return driver
 
 
 def convert_browser_cookies_to_aiohttp(cookies: List[Dict[str, Any]]) -> Dict[str, Any]:
