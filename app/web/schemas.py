@@ -42,6 +42,7 @@ class GamePassInfo(BaseModel):
 class GameInfo(BaseModel):
     id: int
     name: str
+    icon_url: str
 
 
 class BuyRobuxScheme(BaseModel):

@@ -29,7 +29,20 @@ logger = get_logger()
 router = APIRouter(prefix="/api")
 
 
-def form_batch_request(users: list[dict]) -> list[dict]:
+def form_games_batch_request(game_ids: list[int]) -> list[dict]:
+	result = []
+	for id in game_ids:
+		result.append({
+			"requestId": f"{id}::GameThumbnail:768x432:webp:regular",
+			"format": "webp",
+			"size": "246x246",
+			"targetId": id,
+			"type": "AvatarHeadshot",
+		})
+	return result
+
+
+def form_users_batch_request(users: list[dict]) -> list[dict]:
 	result = []
 	for user in users:
 		user_id = user["id"]
@@ -95,7 +108,7 @@ async def search_player(
 	logger.info(str(_data)[0:200])
 	users = _data["data"]
 
-	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_batch_request(users))
+	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_users_batch_request(users))
 	if batch_response.status == 429:
 		logger.error("No batch response")
 		raise HTTPException(detail="Rate limit exceeded", status_code=429)
@@ -161,7 +174,23 @@ async def search_game(
 		logger.warning("Rate limit reached")
 		return []
 	data: list[dict] = (await response.json())['data']
-	player_games = [GameInfo(**v) for v in data]
+	game_ids = [x['id'] for x in data]
+	response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_games_batch_request(game_ids))
+	if response.status == 400 or response.status == 429:
+		logger.warning("Rate limit reached")
+		return []
+	batch_data: list[dict] = (await response.json())['data']
+
+	player_games = []
+
+	for image, game in zip(batch_data, data):
+		player_games.append(
+			GameInfo(
+				name=game['name'],
+				id=game['id'],
+				icon_url=image['imageUrl'],
+			)
+		)
 
 	logger.info(f"Lset to player_game_{player_id}")
 	await redis.set(f"player_game_{player_id}", json.dumps(player_games))
