@@ -240,7 +240,7 @@ async def buy_robux(
 		gamepasses = [GamePassInfo(**v) for v in _temp]
 
 	real_gamepass_price = round(int(data.robux_amount) * 1.429)
-	logger.info(f"Real gamepass price: {real_gamepass_price}")
+	logger.info(f"Real gamepass price: {real_gamepass_price}, gamepasses of user: {gamepasses}")
 	found_gamepass: GamePassInfo | None = None
 	for game_pass in gamepasses:
 		if game_pass.price == real_gamepass_price and game_pass.sellerName == data.roblox_username:
