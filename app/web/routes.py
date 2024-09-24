@@ -211,6 +211,7 @@ async def buy_robux(
 	publisher: BasicMessageSender = Depends(get_publisher)
 ) -> TransactionScheme | None:
 
+	logger.info(f"SEarching in place: {data.game_id}")
 	universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
 	if universe_response.status == 429:
 		logger.error("No universe response")
