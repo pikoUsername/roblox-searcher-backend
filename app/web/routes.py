@@ -216,7 +216,7 @@ async def buy_robux(
 		universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
 		if universe_response.status == 429:
 			logger.error("No universe response")
-			return
+			raise HTTPException(detail="No unvierse response", status_code=429)
 
 		_data = await universe_response.json()
 
@@ -226,7 +226,7 @@ async def buy_robux(
 
 		if response.status == 429:
 			logger.error("No gamepass response")
-			return
+			raise HTTPException(detail="Rate limit for gamepasses", status_code=429)
 
 		_temp: list[dict] = (await response.json())['data']
 		gamepasses = [GamePassInfo(**v) for v in _temp]
@@ -237,20 +237,21 @@ async def buy_robux(
 		_temp: list[dict] = json.loads(gamepasses)
 		gamepasses = [GamePassInfo(**v) for v in _temp]
 
+	real_gamepass_price = round(int(data.robux_amount) * 1.3)
 	found_gamepass: GamePassInfo | None = None
 	for game_pass in gamepasses:
-		if game_pass.price == data.robux_amount and game_pass.sellerName == data.roblox_username:
+		if game_pass.price == real_gamepass_price and game_pass.sellerName == data.roblox_username:
 			found_gamepass = game_pass
 
 	if not found_gamepass:
-		return
+		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
 
 	logger.info("Sending transaction!!!!!")
 	publisher.send_message(
 		RobuxBuyServiceScheme(
 			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
 			tx_id=1,
-			price=round(int(data.robux_amount) * 1.3),
+			price=real_gamepass_price,
 		).dict()
 	)
 	logger.info("WAITING")
