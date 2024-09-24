@@ -85,6 +85,8 @@ def get_requests_driver(settings: "Settings") -> Firefox:
 
     opts = webdriver.FirefoxOptions()
     opts.add_argument("--disable-web-security")
+    opts.add_argument(f"--width={settings.window_size.split(',')[0]}")
+    opts.add_argument(f"--height={settings.window_size.split(',')[1]}")
     if not settings.debug:
         opts.add_argument("--headless")
         opts.add_argument("--disable-gpu")
