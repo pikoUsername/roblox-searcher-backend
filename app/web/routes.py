@@ -210,34 +210,26 @@ async def buy_robux(
 	client: ClientSession = Depends(client_provider),
 	publisher: BasicMessageSender = Depends(get_publisher)
 ) -> TransactionScheme | None:
-	# searches in persons game a gamepass that match given robux amount!
-	gamepasses = await redis.get(f"game_{data.game_id}")
 
-	if not gamepasses:
-		# поебать
-		universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
-		if universe_response.status == 429:
-			logger.error("No universe response")
-			raise HTTPException(detail="No unvierse response", status_code=429)
+	universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
+	if universe_response.status == 429:
+		logger.error("No universe response")
+		raise HTTPException(detail="No unvierse response", status_code=429)
 
-		_data = await universe_response.json()
+	_data = await universe_response.json()
 
-		universe_id = _data["universeId"]
-		response = await client.get(
-			f"https://games.roblox.com/v1/games/{universe_id}/game-passes?limit=100&sortOrder=1")
+	universe_id = _data["universeId"]
+	response = await client.get(
+		f"https://games.roblox.com/v1/games/{universe_id}/game-passes?limit=100&sortOrder=1")
 
-		if response.status == 429:
-			logger.error("No gamepass response")
-			raise HTTPException(detail="Rate limit for gamepasses", status_code=429)
+	if response.status == 429:
+		logger.error("No gamepass response")
+		raise HTTPException(detail="Rate limit for gamepasses", status_code=429)
 
-		_temp: list[dict] = (await response.json())['data']
-		gamepasses = [GamePassInfo(**v) for v in _temp]
+	_temp: list[dict] = (await response.json())['data']
+	gamepasses = [GamePassInfo(**v) for v in _temp]
 
-		logger.info(f"Lset to game_{data.game_id}")
-		await redis.set(f"game_{data.game_id}", json.dumps([x.dict() for x in gamepasses]))
-	else:
-		_temp: list[dict] = json.loads(gamepasses)
-		gamepasses = [GamePassInfo(**v) for v in _temp]
+	logger.info(f"Lset to game_{data.game_id}")
 
 	real_gamepass_price = round(int(data.robux_amount) * 1.429)
 	logger.info(f"Real gamepass price: {real_gamepass_price}, gamepasses of user: {gamepasses}")
