@@ -6,6 +6,7 @@ from app.web.middlewares.logger import LoggingMiddleware
 origins = [
     "http://localhost",
     "http://localhost:8000",
+    "*"
 ]
 
 
