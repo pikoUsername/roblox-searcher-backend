@@ -276,10 +276,11 @@ async def robux_amount(
 		return int(response)
 	user_id = await redis.get("bot_user_id")
 	if not user_id:
-		response = driver_requests.request("POST", "https://presence.roblox.com/v1/presence/users")
-		if response.status_code != 200:
+		raw_response = driver_requests.execute("localStorage.getItem('PresenceData');")
+		response = json.loads(raw_response['value'])
+		if not response:
 			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
-		data = response.json()['userPresences']
+		data = response.values()[0]['data']['userPresences']
 		user_id = data['userId']
 		await redis.set("bot_user_id", user_id)
 
