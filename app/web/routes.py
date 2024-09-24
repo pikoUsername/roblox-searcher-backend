@@ -279,7 +279,6 @@ async def robux_amount(
 	user_id = await redis.get("bot_user_id")
 	if not user_id:
 		logger.info('Starting to execute a plans')
-		driver_requests.get("https://roblox.com")
 		raw_response = driver_requests.execute_script("return window.localStorage.getItem('PresenceData');")
 		logger.info(f"Raw response: {raw_response}")
 		response = json.loads(raw_response['value'])
