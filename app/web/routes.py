@@ -281,10 +281,10 @@ async def robux_amount(
 		logger.info('Starting to execute a plans')
 		raw_response = driver_requests.execute_script("return window.localStorage.getItem('PresenceData');")
 		logger.info(f"Raw response: {raw_response}")
-		response = json.loads(raw_response['value'])
+		response = json.loads(raw_response)
 		if not response:
 			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
-		data = response.values()[0]['data']['userPresences']
+		data = list(response.values())[0]['data']
 		user_id = data['userId']
 		await redis.set("bot_user_id", user_id)
 	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
