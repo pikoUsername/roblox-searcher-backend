@@ -218,6 +218,8 @@ async def buy_robux(
 
 	_data = await universe_response.json()
 
+	logger.info(f"Universe find... {_data}")
+
 	universe_id = _data["universeId"]
 	response = await client.get(
 		f"https://games.roblox.com/v1/games/{universe_id}/game-passes?limit=100&sortOrder=1")
@@ -226,10 +228,14 @@ async def buy_robux(
 		logger.error("No gamepass response")
 		raise HTTPException(detail="Rate limit for gamepasses", status_code=429)
 
-	_temp: list[dict] = (await response.json())['data']
+	json_response = await response.json()
+
+	logger.info(f"Raw response: {json_response}")
+	_temp: list[dict] = json_response['data']
 	gamepasses = [GamePassInfo(**v) for v in _temp]
 
 	logger.info(f"Lset to game_{data.game_id}")
+	logger.info(f'Gamepasses: {_temp}')
 
 	real_gamepass_price = round(int(data.robux_amount) * 1.429)
 	logger.info(f"Real gamepass price: {real_gamepass_price}, gamepasses of user: {gamepasses}")
