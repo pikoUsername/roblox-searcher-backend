@@ -1,3 +1,4 @@
+import asyncio
 import json
 import random
 from datetime import datetime
@@ -104,7 +105,8 @@ async def search_player(
 	response = driver_requests.request("GET", f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
 	if response.status_code == 429:
 		logger.error("No search user response")
-		raise HTTPException(detail="Rate limit exceeded", status_code=429)
+		await asyncio.sleep(5.0)
+		response = driver_requests.request("GET", f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
 	_data = response.json()
 	logger.info(str(_data)[0:200])
 	users = _data["data"]
@@ -238,6 +240,7 @@ async def buy_robux(
 		gamepasses = [GamePassInfo(**v) for v in _temp]
 
 	real_gamepass_price = round(int(data.robux_amount) * 1.3)
+	logger.info(f"Real gamepass price: {real_gamepass_price}")
 	found_gamepass: GamePassInfo | None = None
 	for game_pass in gamepasses:
 		if game_pass.price == real_gamepass_price and game_pass.sellerName == data.roblox_username:
@@ -246,7 +249,7 @@ async def buy_robux(
 	if not found_gamepass:
 		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
 
-	logger.info("Sending transaction!!!!!")
+	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
 	publisher.send_message(
 		RobuxBuyServiceScheme(
 			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
