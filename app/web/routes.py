@@ -250,7 +250,7 @@ async def buy_robux(
 		RobuxBuyServiceScheme(
 			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
 			tx_id=1,
-			price=int(data.robux_amount),
+			price=round(int(data.robux_amount) * 1.3),
 		).dict()
 	)
 	logger.info("WAITING")
