@@ -279,6 +279,7 @@ async def robux_amount(
 		logger.info('Starting to execute a plans')
 		driver_requests.get("https://roblox.com")
 		raw_response = driver_requests.execute_script("localStorage.getItem('PresenceData');")
+		logger.info(f"Raw response: {raw_response}")
 		response = json.loads(raw_response['value'])
 		if not response:
 			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
