@@ -276,8 +276,9 @@ async def robux_amount(
 		return int(response)
 	user_id = await redis.get("bot_user_id")
 	if not user_id:
+		logger.info('Starting to execute a plans')
 		driver_requests.get("https://roblox.com")
-		raw_response = driver_requests.execute_async_script("localStorage.getItem('PresenceData');")
+		raw_response = driver_requests.execute_script("localStorage.getItem('PresenceData');")
 		response = json.loads(raw_response['value'])
 		if not response:
 			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
