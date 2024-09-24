@@ -287,10 +287,12 @@ async def robux_amount(
 		data = list(response.values())[0]['data']
 		user_id = data['userId']
 		await redis.set("bot_user_id", user_id)
+	logger.info("Sending request")
 	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
 	if response.status_code != 200:
 		raise HTTPException(detail="Cannot get robux amount", status_code=response.status_code)
 	robux = response.json()['robux']
+	logger.info(f"Robux amount: {robux}")
 
 	await redis.set("bot_current_amount", robux)
 	await redis.expire("bot_current_amount", 3600)
