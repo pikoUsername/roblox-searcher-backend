@@ -13,6 +13,7 @@ def load_middlewares(
         app: FastAPI,
         debug: bool = False
 ) -> None:
+    origins.append("*")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
