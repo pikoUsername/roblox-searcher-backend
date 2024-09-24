@@ -239,7 +239,7 @@ async def buy_robux(
 		_temp: list[dict] = json.loads(gamepasses)
 		gamepasses = [GamePassInfo(**v) for v in _temp]
 
-	real_gamepass_price = round(int(data.robux_amount) * 1.3)
+	real_gamepass_price = round(int(data.robux_amount) * 1.429)
 	logger.info(f"Real gamepass price: {real_gamepass_price}")
 	found_gamepass: GamePassInfo | None = None
 	for game_pass in gamepasses:
