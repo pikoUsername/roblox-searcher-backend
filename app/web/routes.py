@@ -177,7 +177,7 @@ async def search_game(
 		logger.warning("Rate limit reached")
 		return []
 	data: list[dict] = (await response.json())['data']
-	game_ids = [x['id'] for x in data]
+	game_ids = [x['rootPlace']['id'] for x in data]
 	response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_games_batch_request(game_ids))
 	if response.status == 400 or response.status == 429:
 		logger.warning("Rate limit reached")
@@ -191,7 +191,7 @@ async def search_game(
 		player_games.append(
 			GameInfo(
 				name=game['name'],
-				id=game['id'],
+				id=game['rootPlace']['id'],
 				icon_url=image['imageUrl'],
 			)
 		)
@@ -199,6 +199,7 @@ async def search_game(
 	logger.info(f"Lset to player_game_{player_id}")
 	logger.info(f"Player games: {player_games}")
 	await redis.set(f"player_game_{player_id}", json.dumps([x.dict() for x in player_games]))
+	await redis.expire(f"player_game_{player_id}", 360)
 
 	return player_games
 
