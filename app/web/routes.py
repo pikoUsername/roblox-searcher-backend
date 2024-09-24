@@ -266,6 +266,34 @@ async def buy_robux(
 	)
 
 
+@router.get("/robux_amount")
+async def robux_amount(
+	redis: Redis = Depends(get_redis),
+	driver_requests: Firefox = Depends(requests_driver_provider),
+) -> int:
+	response = await redis.get("bot_current_amount")
+	if response:
+		return int(response)
+	user_id = await redis.get("bot_user_id")
+	if not user_id:
+		response = driver_requests.request("GET", "https://presence.roblox.com/v1/presence/users")
+		if response.status_code != 200:
+			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
+		data = response.json()['userPresences']
+		user_id = data['userId']
+		await redis.set("bot_user_id", user_id)
+
+	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
+	if response.status_code != 200:
+		raise HTTPException(detail="Cannot get robux amount", status_code=response.status_code)
+
+	robux = response.json()['robux']
+	await redis.set("bot_current_amount", robux)
+	await redis.expire("bot_current_amount", 3600)
+
+	return robux
+
+
 @router.post("/buy_robux/url")
 async def buy_robux_by_url(
 	data: BuyRobuxesThroghUrl,
