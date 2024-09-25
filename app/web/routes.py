@@ -279,15 +279,12 @@ async def robux_amount(
 	user_id = await redis.get("bot_user_id")
 	if not user_id:
 		logger.info('Starting to execute a plans')
-		raw_response = driver_requests.execute_script("return window.localStorage.getItem('PresenceData');")
-		logger.info(f"Raw response: {raw_response}")
-		response = json.loads(raw_response)
-		if not response:
-			raise HTTPException(detail=f"Cannot get user presence: {response.status_code}", status_code=response.status_code)
-		data = list(response.values())[0]['data']
-		user_id = data['userId']
-		await redis.set("bot_user_id", user_id)
-	logger.info("Sending request")
+		user_id = driver_requests.find_element(By.CSS_SELECTOR, "a.text-link.dynamic-overflow-container")
+		link = user_id.get_attribute("href")
+		parts = link.split("/")
+		logger.info(f"Parts: {parts}")
+		user_id = int(parts[4])
+	logger.info(f"Sending request, user_id: {user_id}")
 	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
 	if response.status_code != 200:
 		raise HTTPException(detail="Cannot get robux amount", status_code=response.status_code)
@@ -295,7 +292,9 @@ async def robux_amount(
 	logger.info(f"Robux amount: {robux}")
 
 	await redis.set("bot_current_amount", robux)
-	await redis.expire("bot_current_amount", 3600)
+	await redis.expire("bot_current_amount", 360)
+
+	await redis.set("bot_user_id", user_id)
 
 	return robux
 
