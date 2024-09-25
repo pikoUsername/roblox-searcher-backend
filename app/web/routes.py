@@ -276,15 +276,15 @@ async def robux_amount(
 	if response:
 		return int(response)
 
-	user_id = await redis.get("bot_user_id")
+	user_id: bytes = await redis.get("bot_user_id")
 	if not user_id:
 		logger.info('Starting to execute a plans')
-		user_id = driver_requests.find_element(By.CSS_SELECTOR, "a.text-link.dynamic-overflow-container")
-		link = user_id.get_attribute("href")
+		_temp = driver_requests.find_element(By.CSS_SELECTOR, "a.text-link.dynamic-overflow-container")
+		link = _temp.get_attribute("href")
 		parts = link.split("/")
 		logger.info(f"Parts: {parts}")
-		user_id = int(parts[4])
-	url = f"https://economy.roblox.com/v1/users/{str(user_id)}/currency"
+		user_id = bytes(parts[4], 'utf8')
+	url = f"https://economy.roblox.com/v1/users/{user_id.decode('utf8')}/currency"
 	logger.info(f"Sending request, url: {url}")
 	response = driver_requests.request("GET", url)
 	logger.info(f"Response of currency getter: {response.text}")
