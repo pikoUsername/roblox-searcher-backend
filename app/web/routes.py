@@ -284,8 +284,9 @@ async def robux_amount(
 		parts = link.split("/")
 		logger.info(f"Parts: {parts}")
 		user_id = int(parts[4])
-	logger.info(f"Sending request, user_id: {user_id}")
-	response = driver_requests.request("GET", f"https://economy.roblox.com/v1/users/{user_id}/currency")
+	url = f"https://economy.roblox.com/v1/users/{str(user_id)}/currency"
+	logger.info(f"Sending request, url: {url}")
+	response = driver_requests.request("GET", url)
 	logger.info(f"Response of currency getter: {response.text}")
 	if response.status_code != 200:
 		raise HTTPException(detail="Cannot get robux amount", status_code=response.status_code)
