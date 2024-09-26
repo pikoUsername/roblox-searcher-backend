@@ -216,7 +216,8 @@ async def buy_robux(
 	data: BuyRobuxScheme,
 	client: ClientSession = Depends(client_provider),
 	publisher: BasicMessageSender = Depends(get_publisher),
-	transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider)
+	transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider),
+	requests_driver: Firefox = Depends(requests_driver_provider)
 ) -> TransactionScheme | None:
 
 	logger.info(f"SEarching in place: {data.game_id}")
@@ -261,6 +262,14 @@ async def buy_robux(
 			tx_id=1,
 			price=real_gamepass_price,
 		)
+
+	try:
+		WebDriverWait(requests_driver, 4).until(
+			presence_of_any_text_in_element((By.CSS_SELECTOR, ".inventory-button"))
+		)
+	except TimeoutException:
+		raise HTTPException(detail="Gamepass is already bought, create new one", status_code=409)
+
 	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
 	logger.info(f"Message to bot service: {message}")
 	publisher.send_message(message.dict())

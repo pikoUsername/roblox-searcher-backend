@@ -9,7 +9,6 @@ services:
     environment:
       db_dsn: "postgresql://postgres:password@db:5433/postgres"
       redis_host: "redis"
-
     ports:
       - "8000:8000"
 
