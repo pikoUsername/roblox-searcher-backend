@@ -50,10 +50,11 @@ class BuyRobuxScheme(BaseModel):
     robux_amount: int
     paid_amount: Decimal
     roblox_username: str
+    email: str | None
 
 
 class TransactionScheme(BaseModel):
-    id: int
+    id: UUID
     roblox_name: str
     robux_amount: int
     paid_amount: Decimal

@@ -7,15 +7,20 @@ from decimal import Decimal
 from aiohttp import ClientSession
 from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException, Body
 from redis.asyncio import Redis
+from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
 from seleniumrequests import Firefox
 
 from app.providers import get_publisher
+from app.services.driver import presence_of_any_text_in_element
 from app.services.queue.publisher import BasicMessageSender
 from app.services.validators import validate_game_pass_url
-from app.web.interfaces import ITokenRepository
+from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
-from app.web.provider import token_repo_provider, get_redis, client_provider, requests_driver_provider
+from app.web.models import TransactionEntity
+from app.web.provider import token_repo_provider, get_redis, client_provider, requests_driver_provider, \
+	transaction_repo_provider
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl
 
@@ -121,6 +126,7 @@ async def search_player(
 
 	logger.info(f"lset is placed in players_{player_name}")
 	await redis.set(f"players_{player_name}", json.dumps([x.dict() for x in data]))
+	await redis.expire(f"players_{player_name}", 3600)
 
 	return data
 
@@ -208,9 +214,9 @@ async def search_game(
 @router.post("/buy_robux", response_model=TransactionScheme)
 async def buy_robux(
 	data: BuyRobuxScheme,
-	redis: Redis = Depends(get_redis),
 	client: ClientSession = Depends(client_provider),
-	publisher: BasicMessageSender = Depends(get_publisher)
+	publisher: BasicMessageSender = Depends(get_publisher),
+	transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider)
 ) -> TransactionScheme | None:
 
 	logger.info(f"SEarching in place: {data.game_id}")
@@ -250,21 +256,89 @@ async def buy_robux(
 	if not found_gamepass:
 		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
 
-	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
-	publisher.send_message(
-		RobuxBuyServiceScheme(
+	message = RobuxBuyServiceScheme(
 			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
 			tx_id=1,
 			price=real_gamepass_price,
-		).dict()
-	)
+		)
+	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
+	logger.info(f"Message to bot service: {message}")
+	publisher.send_message(message.dict())
 	logger.info("WAITING")
-	return TransactionScheme(
-		id=random.randint(0, 10) + random.randint(0, 100),
-		roblox_name=found_gamepass.sellerName,
-		robux_amount=data.robux_amount,
-		paid_amount=data.paid_amount,
+
+	entity = TransactionEntity(
+		amount=data.paid_amount,
+		robux_amount=real_gamepass_price,
+		game_id=data.game_id,
+		gamepass_id=found_gamepass.id,
+		email=data.email,
+		roblox_username=data.roblox_username,
 	)
+
+	await transaction_repo.add_transaction(entity)
+
+	return TransactionScheme(
+		id=entity.id,
+		roblox_name=entity.roblox_username,
+		robux_amount=real_gamepass_price,
+		paid_amount=entity.amount,
+		successful=False,
+	)
+
+
+@router.post("/buy_robux/check")
+async def buy_robux_check(
+	data: BuyRobuxScheme,
+	client: ClientSession = Depends(client_provider),
+	requests_driver: Firefox = Depends(requests_driver_provider)
+) -> bool:
+
+	logger.info(f"SEarching in place: {data.game_id}")
+	universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
+	if universe_response.status == 429:
+		logger.error("No universe response")
+		raise HTTPException(detail="No unvierse response", status_code=429)
+
+	_data = await universe_response.json()
+
+	logger.info(f"Universe find... {_data}")
+
+	universe_id = _data["universeId"]
+	response = await client.get(
+		f"https://games.roblox.com/v1/games/{universe_id}/game-passes?limit=100&sortOrder=1")
+
+	if response.status == 429:
+		logger.error("No gamepass response")
+		raise HTTPException(detail="Rate limit for gamepasses", status_code=429)
+
+	json_response = await response.json()
+
+	logger.info(f"Raw response: {json_response}")
+	_temp: list[dict] = json_response['data']
+	gamepasses = [GamePassInfo(**v) for v in _temp]
+
+	logger.info(f'Gamepasses: {_temp}')
+
+	real_gamepass_price = round(int(data.robux_amount) * 1.429)
+	logger.info(f"Real gamepass price: {real_gamepass_price}, gamepasses of user: {gamepasses}")
+	found_gamepass: GamePassInfo | None = None
+	for game_pass in gamepasses:
+		if game_pass.price == real_gamepass_price and game_pass.sellerName == data.roblox_username:
+			found_gamepass = game_pass
+
+	if not found_gamepass:
+		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
+
+	requests_driver.get(f"https://www.roblox.com/game-pass/{found_gamepass.id}/")
+	logger.info(f"Redirecting bot to link: https://www.roblox.com/game-pass/{found_gamepass.id}/")
+	try:
+		WebDriverWait(requests_driver, 4).until(
+			presence_of_any_text_in_element((By.CSS_SELECTOR, ".inventory-button"))
+		)
+	except TimeoutException:
+		return False
+
+	return True
 
 
 @router.get("/robux_amount")

@@ -16,9 +16,9 @@ from app.services.db import get_db_conn
 from app.services.interfaces import BasicDBConnector
 from app.settings import get_settings
 from app.web.db import setup_engine, sa_session_factory
-from app.web.interfaces import ITokenRepository
+from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
-from app.web.repos import TokenRepository
+from app.web.repos import TokenRepository, TransactionRepository
 from app.web.websettings import WebSettings, get_web_settings
 
 
@@ -38,6 +38,10 @@ async def session_provider(settings: WebSettings = Depends(get_web_settings)) ->
 
 async def token_repo_provider(session: AsyncSession = Depends(session_provider)) -> ITokenRepository:
 	return TokenRepository(session)
+
+
+async def transaction_repo_provider(session: AsyncSession = Depends(session_provider)) -> ITransactionsRepo:
+	return TransactionRepository(session)
 
 
 async def get_roblox_token_repo() -> Tuple[UserTokenRepository, BasicDBConnector]:

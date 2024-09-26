@@ -1,11 +1,12 @@
 import uuid
 from datetime import datetime, timedelta
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.web.interfaces import ITokenRepository
-from app.web.models import Token
+from app.web.interfaces import ITokenRepository, ITransactionsRepo
+from app.web.models import Token, TransactionEntity
 
 
 class TokenRepository(ITokenRepository):
@@ -40,3 +41,32 @@ class TokenRepository(ITokenRepository):
 	async def get_token(self, token_id: str) -> Token | None:
 		token = await self.db.get(Token, token_id)
 		return token
+
+
+class TransactionRepository(ITransactionsRepo):
+	def __init__(self, db: AsyncSession):
+		self.db = db
+
+	async def add_transaction(self, entity: TransactionEntity) -> UUID:
+		self.db.add(entity)
+		await self.db.commit()
+		return entity.id
+
+	async def get_transaction(self, transaction_id: UUID) -> Optional[TransactionEntity]:
+		# Получаем транзакцию по ID
+		transaction = await self.db.get(TransactionEntity, transaction_id)
+		return transaction
+
+	async def delete_transaction(self, transaction_id: UUID) -> bool:
+		# Удаляем транзакцию по ID
+		transaction = await self.db.get(TransactionEntity, transaction_id)
+		if transaction:
+			await self.db.delete(transaction)
+			await self.db.commit()
+			return True
+		return False
+
+	async def update_transaction(self, entity: TransactionEntity) -> bool:
+		# Обновляем информацию о транзакции
+		await self.db.merge(entity)
+		return True
