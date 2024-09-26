@@ -60,7 +60,7 @@ class TransactionEntity(IdEntity):
 	game_id: int
 	gamepass_id: int
 	email: str | None = field(default=None)
-	status: TransactionStatus = field(default=TransactionStatus.pending)
+	status: TransactionStatus = field(default=TransactionStatus.pending.value)
 	roblox_username: str
 
 	@staticmethod
@@ -72,7 +72,7 @@ class TransactionEntity(IdEntity):
 			Column("game_id", BIGINT, nullable=False),  # Идентификатор игры
 			Column("gamepass_id", BIGINT, nullable=False),  # Идентификатор gamepass
 			Column("email", String, nullable=True),  # Email, может быть пустым
-			Column("status", String, nullable=False, default=TransactionStatus.pending),
+			Column("status", String, nullable=False, default=TransactionStatus.pending.value),
 			# Статус транзакции
 			Column("roblox_username", String, nullable=False),  # Roblox имя пользователя
 		]

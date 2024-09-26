@@ -255,7 +255,7 @@ async def buy_robux(
 			found_gamepass = game_pass
 
 	if not found_gamepass:
-		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
+		raise HTTPException(detail="Not found gamepasses with that amount", status_code=402)
 
 	message = RobuxBuyServiceScheme(
 			url=f"https://www.roblox.com/game-pass/{found_gamepass.id}/",
@@ -264,16 +264,13 @@ async def buy_robux(
 		)
 
 	try:
-		WebDriverWait(requests_driver, 4).until(
+		WebDriverWait(requests_driver, 3).until(
 			presence_of_any_text_in_element((By.CSS_SELECTOR, ".inventory-button"))
 		)
 	except TimeoutException:
+		pass
+	else:
 		raise HTTPException(detail="Gamepass is already bought, create new one", status_code=409)
-
-	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
-	logger.info(f"Message to bot service: {message}")
-	publisher.send_message(message.dict())
-	logger.info("WAITING")
 
 	entity = TransactionEntity(
 		amount=data.paid_amount,
@@ -285,6 +282,11 @@ async def buy_robux(
 	)
 
 	await transaction_repo.add_transaction(entity)
+
+	logger.info(f"Sending transaction!!!!!, found gamepass: {found_gamepass}")
+	logger.info(f"Message to bot service: {message}")
+	publisher.send_message(message.dict())
+	logger.info("WAITING")
 
 	return TransactionScheme(
 		id=entity.id,
@@ -336,18 +338,19 @@ async def buy_robux_check(
 			found_gamepass = game_pass
 
 	if not found_gamepass:
-		raise HTTPException(detail="Not found gamepasses with that amount", status_code=400)
+		raise HTTPException(detail="Not found gamepasses with that amount", status_code=402)
 
 	requests_driver.get(f"https://www.roblox.com/game-pass/{found_gamepass.id}/")
 	logger.info(f"Redirecting bot to link: https://www.roblox.com/game-pass/{found_gamepass.id}/")
 	try:
-		WebDriverWait(requests_driver, 4).until(
+		WebDriverWait(requests_driver, 3).until(
 			presence_of_any_text_in_element((By.CSS_SELECTOR, ".inventory-button"))
 		)
 	except TimeoutException:
-		return False
+		logger.info("Oh yes!!")
+		return True
 
-	return True
+	return False
 
 
 @router.get("/robux_amount")
