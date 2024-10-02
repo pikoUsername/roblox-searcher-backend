@@ -5,9 +5,8 @@ from enum import Enum
 from typing import Sequence
 
 from attr import define, field
-from sqlalchemy import Column, DateTime, func, Table, String, ForeignKey, Boolean, Integer, UUID, DECIMAL, BIGINT
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import registry, relationship
+from sqlalchemy import Column, DateTime, func, Table, String, Boolean, UUID, DECIMAL, BIGINT, Integer, JSON
+from sqlalchemy.orm import registry
 
 
 class TransactionStatus(Enum):
@@ -78,6 +77,40 @@ class TransactionEntity(IdEntity):
 		]
 
 
+@entity
+class BotToken:
+	id: int
+	roblox_name: str
+	token: str
+	is_active: bool = True
+
+	@staticmethod
+	def mapper_args() -> Sequence[Column]:
+		return [
+			Column("id", BIGINT, autoincrement=True, nullable=False, primary_key=True, index=True),
+			Column("roblox_name", String(255), nullable=True),
+			Column("token", String, nullable=False, unique=True),
+			Column("is_active", Boolean, nullable=True, default=True)
+		]
+
+
+@entity
+class Bonuses:
+	roblox_name: str
+	bonus: int = 0
+	activated_for: str | None = field(default=None)
+	completed_tasks: str = field(default="[]")
+
+	@staticmethod
+	def mapper_args() -> Sequence[Column]:
+		return [
+			Column("roblox_name", String(255), primary_key=True),
+			Column("bonus", Integer, nullable=False, default=0, server_default="0"),
+			Column("activated_for", String(255), nullable=True),
+			Column("completed_tasks", JSON, server_default="'[]'")
+		]
+
+
 def load_models(reg: registry):
 	token_model = Table(
 		'tokens',
@@ -90,15 +123,34 @@ def load_models(reg: registry):
 		*TransactionEntity.mapper_args()  # Используем статический метод для определения колонок
 	)
 
+	bot_transaction_model = Table(
+		'user_tokens',
+		reg.metadata,
+		*BotToken.mapper_args(),
+	)
+
+	bonus_model = Table(
+		'bonuses',
+		reg.metadata,
+		*Bonuses.mapper_args(),
+	)
+
+	reg.map_imperatively(
+		Bonuses,
+		bonus_model,
+	)
+
 	reg.map_imperatively(
 		TransactionEntity,
 		transaction_model,
 	)
 
 	reg.map_imperatively(
+		BotToken,
+		bot_transaction_model,
+	)
+
+	reg.map_imperatively(
 		Token,
 		token_model,
 	)
-
-
-

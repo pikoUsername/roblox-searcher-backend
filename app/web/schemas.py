@@ -1,9 +1,10 @@
 from dataclasses import dataclass
+from enum import Enum
 from typing import Generic, TypeVar, Optional
 from uuid import UUID
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
 
 
@@ -16,19 +17,49 @@ class ErrorResult(GenericModel, Generic[TData]):
     data: TData
 
 
-class BuyGamePassScheme(BaseModel):
+class BonusType(Enum):
+    telegram = "tg"
+    vk = "vk"
+    discord = "ds"
+    trust_pilot = "review"
+    vk_reviews = "vk_reviews"
+
+
+bonus_rewards: dict[str, int] = {
+    BonusType.telegram.value: 5,
+    BonusType.vk.value: 5,
+    BonusType.discord.value: 5,
+    BonusType.trust_pilot.value: 10,
+    BonusType.vk_reviews.value: 5,
+}
+
+
+FRIEND_ADDED_BONUS = 20
+ROBUX_TO_RUBLES_COURSE = 0.7
+
+
+class BasicModel(BaseModel):
+    class Config:
+        orm_mode = True
+
+
+class BuyGamePassScheme(BasicModel):
     user_id: int
 
 
+class RobuxAmountResponse(BasicModel):
+    course: float
+    instock: int
 
-class PlayerData(BaseModel):
+
+class PlayerData(BasicModel):
     avatar_url: str
     name: str
     display_name: str
     user_id: int
 
 
-class GamePassInfo(BaseModel):
+class GamePassInfo(BasicModel):
     id: int
     name: str
     displayName: str
@@ -39,37 +70,74 @@ class GamePassInfo(BaseModel):
     isOwned: bool
 
 
-class GameInfo(BaseModel):
+class GameInfo(BasicModel):
     id: int
     name: str
     icon_url: str
 
 
-class BuyRobuxScheme(BaseModel):
+class BuyRobuxScheme(BasicModel):
     game_id: int
     robux_amount: int
     paid_amount: Decimal
     roblox_username: str
     email: str | None
+    bonus_username: str | None
+    bonus_withdrawal_id: int | None
 
 
-class TransactionScheme(BaseModel):
+class WithdrawlResponse(BasicModel):
+    withdraw_id: int
+
+
+class BonusesResponse(BasicModel):
+    roblox_name: str
+    bonus: int = 0
+    activated_for: str | None = Field(default=None)
+    completed_tasks: str = Field(default="[]")
+
+
+class BotUpdatedRequest(BasicModel):
+    id: int
+    roblox_name: str | None
+    token: str
+    is_active: bool
+
+
+class BotTokenResponse(BasicModel):
+    id: int
+    roblox_name: str
+    is_active: bool
+
+
+class BotTokenAddRequest(BasicModel):
+    roblox_name: str
+    token: str
+
+
+class AddBonusRequest(BasicModel):
+    player_name: str
+    type: BonusType
+
+
+class TransactionScheme(BasicModel):
     id: UUID
     roblox_name: str
     robux_amount: int
     paid_amount: Decimal
     successful: bool = False
     completed: bool = False
+    coupon_activated: bool = False
 
 
-class RobuxBuyServiceScheme(BaseModel):
+class RobuxBuyServiceScheme(BasicModel):
     """{"url": "https://www.roblox.com/game-pass/153455721/Husband", "price": 10, "tx_id": 2}"""
     url: str
     price: int
     tx_id: int
 
 
-class BuyRobuxesThroghUrl(BaseModel):
+class BuyRobuxesThroghUrl(BasicModel):
     url: str
     amount: int
     roblox_username: str
