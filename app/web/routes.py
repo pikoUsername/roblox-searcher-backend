@@ -380,17 +380,19 @@ async def robux_amount(
 	redis: Redis = Depends(get_redis),
 	driver_requests: Firefox = Depends(requests_driver_provider),
 ) -> RobuxAmountResponse:
-	response = await redis.get("bot_current_amount")
-	if response:
-		return RobuxAmountResponse(instock=int(response), course=ROBUX_TO_RUBLES_COURSE)
-
-	logger.info('Starting to execute a plans')
+	logger.info('Getting player id')
 	_temp = driver_requests.find_element(By.CSS_SELECTOR, "a.text-link.dynamic-overflow-container")
 	link = _temp.get_attribute("href")
 	parts = link.split("/")
 	logger.info(f"Parts: {parts}")
 	user_id = bytes(parts[4], 'utf8')
+	key = f"bot_current_amount_{user_id}"
+	response = await redis.get(key)
+	if response:
+		return RobuxAmountResponse(instock=int(response), course=ROBUX_TO_RUBLES_COURSE)
+
 	url = f"https://economy.roblox.com/v1/users/{user_id.decode('utf8')}/currency"
+
 	logger.info(f"Sending request, url: {url}")
 	response = driver_requests.request("GET", url)
 	logger.info(f"Response of currency getter: {response.text}")
@@ -399,8 +401,8 @@ async def robux_amount(
 	robux = response.json()['robux']
 	logger.info(f"Robux amount: {robux}")
 
-	await redis.set("bot_current_amount", robux)
-	await redis.expire("bot_current_amount", 360)
+	await redis.set(key, robux)
+	await redis.expire(key, 360)
 
 	return RobuxAmountResponse(instock=robux, course=ROBUX_TO_RUBLES_COURSE)
 
