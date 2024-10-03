@@ -79,7 +79,7 @@ class TransactionEntity(IdEntity):
 
 @entity
 class BotToken:
-	id: int = 0
+	id: int | None = None
 	roblox_name: str
 	token: str
 	is_active: bool = True
