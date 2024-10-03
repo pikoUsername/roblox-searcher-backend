@@ -13,7 +13,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from seleniumrequests import Firefox
 
+from app.browser import auth_browser, auth, is_authed
+from app.consts import ROBLOX_TOKEN_KEY
 from app.providers import get_publisher
+from app.repos import UserTokenRepository
 from app.services.driver import presence_of_any_text_in_element
 from app.services.queue.publisher import BasicMessageSender
 from app.services.validators import validate_game_pass_url
@@ -22,7 +25,7 @@ from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
 from app.web.models import TransactionEntity, Bonuses
 from app.web.provider import token_repo_provider, get_redis, client_provider, requests_driver_provider, \
-	transaction_repo_provider, get_token, bot_token_repo_provider, bonuses_repo_provider
+	transaction_repo_provider, get_token, bot_token_repo_provider, bonuses_repo_provider, get_roblox_token_repo
 from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
@@ -494,15 +497,22 @@ async def create_bot(
 	return BotTokenResponse.from_orm(result)
 
 
-@router.post("/bot/select")
+@router.post("/bot/select", dependencies=[Depends(get_token)])
 async def select_bot(
 	body: SelectBotRequest,
-	token: str = Depends(get_token),
 	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
+	user_token_repo: UserTokenRepository = Depends(get_roblox_token_repo),
+	driver_requests: Firefox = Depends(requests_driver_provider),
 ) -> BotTokenResponse:
 	bot_token, err = await token_repo.select_bot(body.bot_id)
 	if err:
 		raise HTTPException(status_code=400, detail=err)
+
+	auth(driver_requests, bot_token.token)
+	if not is_authed(driver_requests):
+		await user_token_repo.mark_as_inactive(bot_token.token)
+		raise HTTPException(status_code=409, detail="Selected token does not work")
+
 	return BotTokenResponse.from_orm(bot_token)
 
 

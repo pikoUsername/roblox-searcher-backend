@@ -37,10 +37,11 @@ def auth(browser: WebDriver, token: str):
 async def auth_browser(driver: WebDriver, token_service: UserTokenRepository) -> None:
 	logger.info("First token has been taken")
 
-	token = await token_service.fetch_token()
-	if not token:
+	tokens = await token_service.fetch_selected_tokens() or await token_service.fetch_active_tokens()
+	if not tokens:
 		logger.warning("Tokens are not available running without token!!!")
 		return
+	token = tokens[0]
 
 	logger.info("Starting authentication to roblox.com")
 
