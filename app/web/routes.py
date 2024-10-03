@@ -448,8 +448,9 @@ async def update_bot(
 	token: str = Depends(get_token),
 	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
 ) -> BotTokenResponse | None:
-	if (await token_repo.get_by_token(bot_update_form.token)).id != bot_update_form.id:
-		raise HTTPException(detail="Conflict", status_code=409)
+	if val := await token_repo.get_by_token(bot_update_form.token):
+		if val.token == bot_update_form.token:
+			raise HTTPException(detail="You gave same token!!", status_code=409)
 	if not bot_update_form.token.startswith(START_PREFIX):
 		raise HTTPException(detail="Start prefix is incorrect", status_code=400)
 	result = await token_repo.update(
