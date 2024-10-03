@@ -30,7 +30,7 @@ from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
-	BonusesResponse, SelectBotRequest
+	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest
 
 
 # невроятный говнокод
@@ -569,10 +569,10 @@ async def activate_coupon(
 
 
 @router.post("/activate_bonus_withdraw")
-async def activate_bonus_withdraw(redis: Redis = Depends(get_redis)) -> WithdrawlResponse:
+async def activate_bonus_withdraw(body: ActivateBonusWithdrawRequest, redis: Redis = Depends(get_redis)) -> WithdrawlResponse:
 	withdraw_id = random.randint(0, 100000)
-	await redis.set(f"withdrawl_{withdraw_id}", 'true')
-	await redis.expire(f"withdrawl_{withdraw_id}", 3600)
+	await redis.set(f"withdrawl_{withdraw_id}_{body.roblox_name}", 'true')
+	await redis.expire(f"withdrawl_{withdraw_id}_{body.roblox_name}", 300)
 
 	return WithdrawlResponse(withdraw_id=withdraw_id)
 

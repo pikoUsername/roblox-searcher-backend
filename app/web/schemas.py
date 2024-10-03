@@ -23,6 +23,7 @@ class BonusType(Enum):
     discord = "ds"
     trust_pilot = "review"
     vk_reviews = "vk_reviews"
+    ds_reviews = "ds_reviews"
 
 
 bonus_rewards: dict[str, int] = {
@@ -74,6 +75,10 @@ class GameInfo(BasicModel):
     id: int
     name: str
     icon_url: str
+
+
+class ActivateBonusWithdrawRequest(BasicModel):
+    roblox_name: str
 
 
 class BuyRobuxScheme(BasicModel):
