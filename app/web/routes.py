@@ -27,7 +27,7 @@ from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
-	BonusesResponse
+	BonusesResponse, SelectBotRequest
 
 
 # невроятный говнокод
@@ -489,6 +489,18 @@ async def create_bot(
 	)
 
 	return BotTokenResponse.from_orm(result)
+
+
+@router.post("/bot/select")
+async def select_bot(
+	body: SelectBotRequest,
+	token: str = Depends(get_token),
+	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
+) -> BotTokenResponse:
+	bot_token, err = await token_repo.select_bot(body.bot_id)
+	if err:
+		raise HTTPException(status_code=400, detail=err)
+	return BotTokenResponse.from_orm(bot_token)
 
 
 @router.post("/auth/token")

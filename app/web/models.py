@@ -83,6 +83,7 @@ class BotToken:
 	roblox_name: str
 	token: str
 	is_active: bool = True
+	is_selected: bool = False
 
 	@staticmethod
 	def mapper_args() -> Sequence[Column]:
@@ -90,7 +91,8 @@ class BotToken:
 			Column("id", BIGINT, autoincrement=True, nullable=False, primary_key=True, index=True),
 			Column("roblox_name", String(255), nullable=True),
 			Column("token", String, nullable=False, unique=True),
-			Column("is_active", Boolean, nullable=True, default=True)
+			Column("is_active", Boolean, nullable=True, default=True, server_default="true"),
+			Column("is_selected", Boolean, nullable=False, server_default="false", default=False)
 		]
 
 

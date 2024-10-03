@@ -1,7 +1,7 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 from uuid import UUID
 
 from loguru import logger
@@ -97,6 +97,18 @@ class BotTokenRepository:
 		await self.db.delete(bot_token)
 		await self.db.commit()
 		return True
+
+	async def select_bot(self, bot_token_id: int) -> Tuple[BotToken | None, str | None]:
+		bot_token = await self.get(bot_token_id)
+		if not bot_token:
+			return None, "No bot token"
+		if not bot_token.is_active:
+			return None, "bot token is not active"
+		bot_token.is_selected = True
+		await self.db.commit()
+		await self.db.refresh(bot_token)
+
+		return bot_token, None
 
 
 class BonusesRepository:
