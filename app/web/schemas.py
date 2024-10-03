@@ -101,7 +101,6 @@ class BotUpdatedRequest(BasicModel):
     id: int
     roblox_name: str | None
     token: str
-    is_active: bool
 
 
 class BotTokenResponse(BasicModel):
