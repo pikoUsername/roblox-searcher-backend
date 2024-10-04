@@ -32,6 +32,7 @@ bonus_rewards: dict[str, int] = {
     BonusType.discord.value: 5,
     BonusType.trust_pilot.value: 10,
     BonusType.vk_reviews.value: 5,
+    BonusType.ds_reviews.value: 5,
 }
 
 
