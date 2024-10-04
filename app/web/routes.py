@@ -229,7 +229,7 @@ async def buy_robux(
 	requests_driver: Firefox = Depends(requests_driver_provider),
 	bonuses_repo: BonusesRepository = Depends(bonuses_repo_provider),
 ) -> TransactionScheme | None:
-	ok = await redis.get(f"withdrawl_{data.bonus_withdrawal_id}")
+	ok = await redis.get(f"withdrawl_{data.bonus_withdrawal_id}_{data.roblox_username}")
 	if data.robux_amount <= MIN_ROBUXES and not ok:
 		raise HTTPException(detail="Need to be highed, and has to have withdrawl id", status_code=400)
 
