@@ -452,12 +452,19 @@ async def update_bot(
 	bot_update_form: BotUpdatedRequest,
 	token: str = Depends(get_token),
 	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
+	driver_requests: Firefox = Depends(requests_driver_provider),
+	user_token_repo: UserTokenRepository = Depends(bot_token_repo_provider)
 ) -> BotTokenResponse | None:
 	if val := await token_repo.get_by_token(bot_update_form.token):
 		if val.token == bot_update_form.token:
 			raise HTTPException(detail="You gave same token!!", status_code=409)
 	if not bot_update_form.token.startswith(START_PREFIX):
 		raise HTTPException(detail="Start prefix is incorrect", status_code=400)
+	auth(driver_requests, bot_update_form.token)
+	if not is_authed(driver_requests):
+		await user_token_repo.mark_as_inactive(bot_update_form.token)
+		raise HTTPException(status_code=409, detail="Selected token does not work")
+
 	result = await token_repo.update(
 		bot_token_id=bot_update_form.id,
 		roblox_name=bot_update_form.roblox_name,
