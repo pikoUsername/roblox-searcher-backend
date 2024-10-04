@@ -78,6 +78,10 @@ class GameInfo(BasicModel):
     icon_url: str
 
 
+class ActivteCouponRequest(BasicModel):
+    player_name: str
+
+
 class ActivateBonusWithdrawRequest(BasicModel):
     roblox_name: str
 

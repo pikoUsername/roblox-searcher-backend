@@ -30,7 +30,7 @@ from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
-	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest
+	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest, ActivteCouponRequest
 
 
 # невроятный говнокод
@@ -559,12 +559,12 @@ async def add_bonus(
 
 @router.post("/activate_coupon")
 async def activate_coupon(
-	player_name: str,
+	body: ActivteCouponRequest,
 	bonuses_repo: BonusesRepository = Depends(bonuses_repo_provider),
 ) -> BonusesResponse:
-	bonus = await bonuses_repo.get_bonus_by_username(player_name)
+	bonus = await bonuses_repo.get_bonus_by_username(body.player_name)
 	if not bonus:
-		bonus = await bonuses_repo.create_bonus(roblox_username=player_name)
+		bonus = await bonuses_repo.create_bonus(roblox_username=body.player_name)
 	return BonusesResponse.from_orm(bonus)
 
 
