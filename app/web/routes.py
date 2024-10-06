@@ -98,7 +98,7 @@ async def create_token(
 ) -> dict:
 	settings = get_web_settings()
 	logger.info(f"Origin host: {request.client.host}")
-	if request.client.host not in "127.0.0.1" and not settings.debug:
+	if request.client.host not in "127.0.0.1" and not settings.web_debug:
 		raise HTTPException(status_code=403, detail="Invalid origin host")
 	token_id = await token_repo.create_token(expiry_minutes)
 	return {

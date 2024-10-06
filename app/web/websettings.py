@@ -6,6 +6,7 @@ from pydantic import BaseSettings
 class WebSettings(BaseSettings):
 	db_dsn: str
 	debug: bool = True
+	web_debug: bool = True
 	log_path: str = "logs/log_{time}.log"
 
 	redis_host: str = "localhost"
