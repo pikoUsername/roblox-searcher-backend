@@ -11,10 +11,10 @@ services:
       redis_host: "redis"
     ports:
       - "8000:8000"
-
     depends_on:
       - db
       - redis
+      - db_migration
 
   redis:
     image: "redis:alpine"
@@ -23,9 +23,11 @@ services:
       - "6379:6379"  # Use the Redis port from the .env file
     volumes:
       - ./redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
 
   db:
-    image: postgres:11.5-alpine
+    image: postgres:17.0-alpine3.20
     hostname: db
     expose:
       - "5433" # Publishes 5431 to other containers but NOT to host machine
@@ -36,3 +38,20 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - ./postgres-data:/var/lib/postgresql/data:cached
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -h localhost -p 5433" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db_migration:
+    build:
+      dockerfile: ./Dockerfile
+    restart: "on-failure"
+    environment:
+      db_dsn: "postgresql+asyncpg://postgres:password@db:5433/postgres"
+    depends_on:
+      - db
+    env_file: .env
+    command: >
+      sh -c "poetry run alembic upgrade head"
