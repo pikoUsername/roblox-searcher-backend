@@ -28,7 +28,7 @@ selenium-wire = "^5.1.0"
 webdriver-manager = "^4.0.2"
 blinker = "1.7.0"
 setuptools = "^75.1.0"
-psycopg2 = "^2.9.9"
+psycopg2-binary = "^2.9.9"
 
 
 [build-system]
