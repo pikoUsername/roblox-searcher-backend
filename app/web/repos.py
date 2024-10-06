@@ -51,7 +51,7 @@ class BotTokenRepository:
 		self.db = db
 
 	async def create(self, roblox_name: str, token: str, is_active: bool = True) -> BotToken:
-		new_bot_token = BotToken(roblox_name=roblox_name, token=token, is_active=is_active)
+		new_bot_token = BotToken(roblox_name=roblox_name, token=token.replace(" ", ""), is_active=is_active)
 		self.db.add(new_bot_token)
 		await self.db.commit()
 		await self.db.refresh(new_bot_token)
@@ -81,7 +81,7 @@ class BotTokenRepository:
 		if roblox_name is not None:
 			bot_token.roblox_name = roblox_name
 		if token is not None:
-			bot_token.token = token
+			bot_token.token = token.replace(" ", "")
 		if is_active is not None:
 			bot_token.is_active = is_active
 
