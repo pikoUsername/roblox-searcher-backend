@@ -26,7 +26,8 @@ logger = get_logger(__name__)
 
 
 async def session_provider(settings: WebSettings = Depends(get_web_settings)) -> AsyncSession:
-	session, registry = get_db_session(settings.db_dsn)
+	engine = setup_engine(settings.db_dsn)
+	session = sa_session_factory(engine)
 
 	sus = session()
 	try:
