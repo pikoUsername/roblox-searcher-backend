@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      db_dsn: "postgresql://postgres:password@db:5433/postgres"
+      db_dsn: "postgresql+asyncpg://postgres:password@db:5433/postgres"
       redis_host: "redis"
     ports:
       - "8000:8000"

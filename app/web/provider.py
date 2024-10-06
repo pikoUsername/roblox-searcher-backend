@@ -15,7 +15,7 @@ from app.repos import UserTokenRepository
 from app.services.db import get_db_conn
 from app.services.interfaces import BasicDBConnector
 from app.settings import get_settings
-from app.web.db import setup_engine, sa_session_factory
+from app.web.db import setup_engine, sa_session_factory, get_db_session
 from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
 from app.web.repos import TokenRepository, TransactionRepository, BotTokenRepository, BonusesRepository
@@ -26,8 +26,7 @@ logger = get_logger(__name__)
 
 
 async def session_provider(settings: WebSettings = Depends(get_web_settings)) -> AsyncSession:
-	engine = setup_engine(settings.db_dsn)
-	session = sa_session_factory(engine)
+	session, registry = get_db_session(settings.db_dsn)
 
 	sus = session()
 	try:
