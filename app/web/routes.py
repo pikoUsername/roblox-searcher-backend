@@ -31,6 +31,7 @@ from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, 
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
 	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest, ActivteCouponRequest
+from app.web.websettings import WebSettings, get_web_settings
 
 
 # невроятный говнокод
@@ -90,9 +91,14 @@ def form_users_response(users: list[dict], batch_info: list[dict]) -> list[Playe
 
 
 @router.post("/create-token")
-async def create_token(request: Request, expiry_minutes: int = 60, token_repo: ITokenRepository = Depends(token_repo_provider)) -> dict:
+async def create_token(
+		request: Request,
+		expiry_minutes: int = 60,
+		token_repo: ITokenRepository = Depends(token_repo_provider),
+) -> dict:
+	settings = get_web_settings()
 	logger.info(f"Origin host: {request.client.host}")
-	if request.client.host not in "127.0.0.1":
+	if request.client.host not in "127.0.0.1" and not settings.debug:
 		raise HTTPException(status_code=403, detail="Invalid origin host")
 	token_id = await token_repo.create_token(expiry_minutes)
 	return {
