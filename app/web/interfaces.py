@@ -38,6 +38,10 @@ class ITransactionsRepo(ABC):
 		pass
 
 	@abstractmethod
+	async def get_transactions(self, roblox_name: str | None) -> Sequence[TransactionEntity]:
+		pass
+
+	@abstractmethod
 	async def get_transaction(self, transaction_id: UUID) -> Optional[TransactionEntity]:
 		pass
 

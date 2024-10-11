@@ -12,6 +12,7 @@ from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from seleniumrequests import Firefox
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.browser import auth_browser, auth, is_authed
 from app.consts import ROBLOX_TOKEN_KEY
@@ -21,6 +22,7 @@ from app.services.driver import presence_of_any_text_in_element
 from app.services.queue.publisher import BasicMessageSender
 from app.services.validators import validate_game_pass_url
 from app.web.consts import MIN_ROBUXES
+from app.web.db import get_db_session
 from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
 from app.web.models import TransactionEntity, Bonuses
@@ -30,7 +32,7 @@ from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
-	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest, ActivteCouponRequest
+	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest, ActivteCouponRequest, TransactionResponseScheme
 from app.web.websettings import WebSettings, get_web_settings
 
 
@@ -198,6 +200,7 @@ async def search_game(
 		logger.warning("Rate limit reached")
 		return []
 	data: list[dict] = (await response.json())['data']
+	logger.debug(data)
 	game_ids = [x['rootPlace']['id'] for x in data]
 	response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_games_batch_request(game_ids))
 	if response.status == 400 or response.status == 429:
@@ -236,8 +239,9 @@ async def buy_robux(
 	bonuses_repo: BonusesRepository = Depends(bonuses_repo_provider),
 ) -> TransactionScheme | None:
 	ok = await redis.get(f"withdrawl_{data.bonus_withdrawal_id}_{data.roblox_username}")
-	if data.robux_amount <= MIN_ROBUXES and not ok:
-		raise HTTPException(detail="Need to be highed, and has to have withdrawl id", status_code=400)
+	if not ok:
+		if data.robux_amount <= MIN_ROBUXES:
+			raise HTTPException(detail="Need to be highed, and has to have withdrawl id", status_code=400)
 
 	logger.info(f"SEarching in place: {data.game_id}")
 	universe_response = await client.get(f"https://apis.roblox.com/universes/v1/places/{data.game_id}/universe")
@@ -588,6 +592,12 @@ async def activate_bonus_withdraw(body: ActivateBonusWithdrawRequest, redis: Red
 	await redis.expire(f"withdrawl_{withdraw_id}_{body.roblox_name}", 300)
 
 	return WithdrawlResponse(withdraw_id=withdraw_id)
+
+@router.get("/get_user_data")
+async def get_user_data(roblox_name: str, transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider)) -> Sequence[TransactionResponseScheme]:
+	transactions = await transaction_repo.get_transactions(roblox_name)
+
+	return [TransactionResponseScheme.from_orm(tx) for tx in transactions]
 
 
 _start_time = datetime.now()

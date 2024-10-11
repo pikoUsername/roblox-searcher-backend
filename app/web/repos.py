@@ -1,6 +1,7 @@
 import json
 import uuid
 from datetime import datetime, timedelta
+from idlelib.pyparse import trans
 from typing import Optional, Sequence, Tuple
 from uuid import UUID
 
@@ -151,6 +152,12 @@ class TransactionRepository(ITransactionsRepo):
 		self.db.add(entity)
 		await self.db.commit()
 		return entity.id
+
+	async def get_transactions(self, roblox_name: str) -> Sequence[TransactionEntity]:
+		stmt = select(TransactionEntity).where(TransactionEntity.roblox_username == roblox_name)
+		result = await self.db.execute(stmt)
+
+		return result.scalars().unique().all()
 
 	async def get_transaction(self, transaction_id: UUID) -> Optional[TransactionEntity]:
 		# Получаем транзакцию по ID

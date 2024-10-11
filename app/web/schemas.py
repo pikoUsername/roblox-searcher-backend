@@ -7,6 +7,7 @@ from decimal import Decimal
 from pydantic import BaseModel, Field
 from pydantic.generics import GenericModel
 
+from app.web.models import TransactionStatus
 
 TData = TypeVar("TData")
 
@@ -142,6 +143,16 @@ class TransactionScheme(BasicModel):
     successful: bool = False
     completed: bool = False
     coupon_activated: bool = False
+
+
+class TransactionResponseScheme(BasicModel):
+    amount: Decimal
+    robux_amount: Decimal
+    game_id: int
+    gamepass_id: int
+    email: str | None = None
+    status: str = Field(default=TransactionStatus.pending.value)
+    roblox_username: str
 
 
 class RobuxBuyServiceScheme(BasicModel):
