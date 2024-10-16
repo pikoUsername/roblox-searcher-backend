@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Generic, TypeVar, Optional
 from uuid import UUID
@@ -153,6 +154,7 @@ class TransactionResponseScheme(BasicModel):
     email: str | None = None
     status: str = Field(default=TransactionStatus.pending.value)
     roblox_username: str
+    created_at: datetime | None
 
 
 class RobuxBuyServiceScheme(BasicModel):

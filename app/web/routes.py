@@ -593,6 +593,7 @@ async def activate_bonus_withdraw(body: ActivateBonusWithdrawRequest, redis: Red
 
 	return WithdrawlResponse(withdraw_id=withdraw_id)
 
+
 @router.get("/get_user_data")
 async def get_user_data(roblox_name: str, transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider)) -> Sequence[TransactionResponseScheme]:
 	transactions = await transaction_repo.get_transactions(roblox_name)
