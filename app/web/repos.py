@@ -1,7 +1,6 @@
 import json
 import uuid
 from datetime import datetime, timedelta
-from idlelib.pyparse import trans
 from typing import Optional, Sequence, Tuple
 from uuid import UUID
 
