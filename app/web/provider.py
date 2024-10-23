@@ -72,7 +72,7 @@ def client_provider(request: Request) -> aiohttp.ClientSession:
 	return request.app.state.client_session
 
 
-def requests_driver_provider(request: Request) -> Firefox:
+def driver_provider(request: Request) -> Firefox:
 	return request.app.state.driver
 
 

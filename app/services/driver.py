@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict, Any, TYPE_CHECKING
 from urllib.parse import urlparse
 
@@ -5,10 +6,11 @@ from loguru import logger
 from selenium.common import StaleElementReferenceException
 from selenium.webdriver.firefox.service import Service as GeckoService
 from selenium.webdriver.remote.webdriver import WebDriver
-from seleniumrequests import Firefox
 from seleniumwire import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.firefox import GeckoDriverManager
+
+from app.web.utils import Firefox
 
 if TYPE_CHECKING:
     from app.settings import Settings
@@ -68,12 +70,13 @@ def get_driver(settings: "Settings") -> WebDriver:
         logger.info("Setting up remote firefox browser")
 
         opts = webdriver.FirefoxOptions()
+        logging.getLogger('seleniumwire').setLevel(logging.CRITICAL)
         opts.add_argument("--disable-web-security")
         agent = settings.user_agent
         opts.add_argument(agent)
 
         service = GeckoService(GeckoDriverManager().install())
-        driver = webdriver.Firefox(service=service, options=opts)
+        driver = Firefox(service=service, options=opts)
     else:
         raise NotImplementedError(f"{settings.browser} is not yet implemented")
 

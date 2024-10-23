@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from app.browser import auth_browser
-from app.services.driver import get_requests_driver
+from app.services.driver import get_requests_driver, get_driver
 from app.settings import get_settings
 from app.web.db import get_db_session, registry
 from app.web.logger import configure_logging, LoggingSettings
@@ -30,7 +30,7 @@ def lifespan() -> Callable:
 
 		aiohttp_client = get_client(token)
 		settings = get_settings()
-		driver = get_requests_driver(settings)
+		driver = get_driver(settings)
 		await auth_browser(driver, token_service=token_repo)
 		try:
 			app.state.client_session = aiohttp_client

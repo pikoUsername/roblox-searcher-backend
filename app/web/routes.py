@@ -12,28 +12,25 @@ from requests import Response
 from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
-from seleniumrequests import Firefox
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.browser import auth_browser, auth, is_authed
-from app.consts import ROBLOX_TOKEN_KEY
 from app.providers import get_publisher
 from app.repos import UserTokenRepository
 from app.services.driver import presence_of_any_text_in_element
 from app.services.queue.publisher import BasicMessageSender
 from app.services.validators import validate_game_pass_url
 from app.web.consts import MIN_ROBUXES
-from app.web.db import get_db_session
 from app.web.interfaces import ITokenRepository, ITransactionsRepo
 from app.web.logger import get_logger
 from app.web.models import TransactionEntity, Bonuses
-from app.web.provider import token_repo_provider, get_redis, client_provider, requests_driver_provider, \
+from app.web.provider import token_repo_provider, get_redis, client_provider, driver_provider, \
 	transaction_repo_provider, get_token, bot_token_repo_provider, bonuses_repo_provider, get_roblox_token_repo
 from app.web.repos import BotTokenRepository, BonusesRepository
 from app.web.schemas import GamePassInfo, PlayerData, GameInfo, BuyRobuxScheme, TransactionScheme, \
 	RobuxBuyServiceScheme, BuyRobuxesThroghUrl, BotTokenResponse, BotUpdatedRequest, BotTokenAddRequest, \
 	AddBonusRequest, bonus_rewards, FRIEND_ADDED_BONUS, RobuxAmountResponse, ROBUX_TO_RUBLES_COURSE, WithdrawlResponse, \
 	BonusesResponse, SelectBotRequest, ActivateBonusWithdrawRequest, ActivteCouponRequest, TransactionResponseScheme
+from app.web.utils import Firefox
 from app.web.websettings import WebSettings, get_web_settings
 
 
@@ -65,7 +62,7 @@ def form_games_batch_request(game_ids: list[int]) -> list[dict]:
 def form_users_batch_request(users: list[dict]) -> list[dict]:
 	result = []
 	for user in users:
-		user_id = user["id"]
+		user_id = user["contentId"]
 
 		result.append({
 			"requestId": f"{user_id}:undefined:AvatarHeadshot:150x150:webp:regular",
@@ -84,9 +81,9 @@ def form_users_response(users: list[dict], batch_info: list[dict]) -> list[Playe
 		result.append(
 			PlayerData(
 				avatar_url=batch["imageUrl"],
-				name=user["name"],
+				name=user["username"],
 				display_name=user["displayName"],
-				user_id=user["id"],
+				user_id=user["contentId"],
 			)
 		)
 
@@ -110,26 +107,41 @@ async def create_token(
 	}
 
 
-async def search_players_with_timeouts(client: Firefox, player_name: str, tries: int = 3, wait: int = 5) -> Response | None:
-	if tries == 0:
-		return
-	response = client.request(
-		"GET",
-		f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10"
+async def search_players_with_timeouts(client: Firefox, player_name: str) -> list[dict] | None:
+	del client.requests
+
+	client.get(f"https://www.roblox.com/search/users?keyword={player_name}")
+
+	WebDriverWait(
+		client,
+		5,
+	).until(
+		presence_of_any_text_in_element((By.CSS_SELECTOR, ".player-item"))
 	)
 
-	if response.status_code == 429:
-		await asyncio.sleep(wait)
-		return await search_players_with_timeouts(client, player_name, tries - 1, wait)
+	data = {}
+	for request in client.requests:
+		if request.url.startswith("https://apis.roblox.com/search-api/omni-search"):
+			data = json.loads(request.response.body)
+			break
 
-	return response
+	if not data:
+		return
+
+	results = data["searchResults"][0]["contents"]
+
+	users = []
+	for user in results:
+		users.append(user)
+
+	return users
 
 
 @router.get("/search/player/{player_name}")
 async def search_player(
 	player_name: str,
 	redis: Redis = Depends(get_redis),
-	driver_requests: Firefox = Depends(requests_driver_provider),
+	driver_requests: Firefox = Depends(driver_provider),
 	client: ClientSession = Depends(client_provider)
 ) -> list[PlayerData] | None:
 	result = await redis.get(f"players_{player_name}")
@@ -140,25 +152,22 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = await search_players_with_timeouts(driver_requests, player_name)
-	if not response:
-		raise HTTPException(detail="Попробуйте потом, слишком много запросов", status_code=429)
-	_data = response.json()
-	logger.info(str(_data)[0:200])
-	users = _data["data"]
+	raw_users = await search_players_with_timeouts(driver_requests, player_name)
+	if raw_users is None:
+		raise HTTPException(detail="Too many requests", status_code=429)
 
-	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_users_batch_request(users))
+	batch_response = await client.post("https://thumbnails.roblox.com/v1/batch", json=form_users_batch_request(raw_users))
 	if batch_response.status == 429:
 		logger.error("No batch response")
 		raise HTTPException(detail="Rate limit exceeded", status_code=429)
 	_data = await batch_response.json()
-	data = form_users_response(users, _data["data"])
+	users = form_users_response(raw_users, _data["data"])
 
 	logger.info(f"lset is placed in players_{player_name}")
-	await redis.set(f"players_{player_name}", json.dumps([x.dict() for x in data]))
+	await redis.set(f"players_{player_name}", json.dumps([x.dict() for x in users]))
 	await redis.expire(f"players_{player_name}", 3600)
 
-	return data
+	return users
 
 
 @router.get("/search/{game_id}/gamepass")
@@ -250,7 +259,7 @@ async def buy_robux(
 	client: ClientSession = Depends(client_provider),
 	publisher: BasicMessageSender = Depends(get_publisher),
 	transaction_repo: ITransactionsRepo = Depends(transaction_repo_provider),
-	requests_driver: Firefox = Depends(requests_driver_provider),
+	requests_driver: Firefox = Depends(driver_provider),
 	bonuses_repo: BonusesRepository = Depends(bonuses_repo_provider),
 ) -> TransactionScheme | None:
 	ok = await redis.get(f"withdrawl_{data.bonus_withdrawal_id}_{data.roblox_username}")
@@ -351,7 +360,7 @@ async def buy_robux(
 async def buy_robux_check(
 	data: BuyRobuxScheme,
 	client: ClientSession = Depends(client_provider),
-	requests_driver: Firefox = Depends(requests_driver_provider)
+	requests_driver: Firefox = Depends(driver_provider)
 ) -> bool:
 
 	logger.info(f"SEarching in place: {data.game_id}")
@@ -406,7 +415,7 @@ async def buy_robux_check(
 @router.get("/robux_amount_and_course")
 async def robux_amount(
 	redis: Redis = Depends(get_redis),
-	driver_requests: Firefox = Depends(requests_driver_provider),
+	driver_requests: Firefox = Depends(driver_provider),
 ) -> RobuxAmountResponse:
 	logger.info('Getting player id')
 	_temp = driver_requests.find_element(By.CSS_SELECTOR, "a.text-link.dynamic-overflow-container")
@@ -477,7 +486,7 @@ async def update_bot(
 	bot_update_form: BotUpdatedRequest,
 	token: str = Depends(get_token),
 	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
-	driver_requests: Firefox = Depends(requests_driver_provider),
+	driver_requests: Firefox = Depends(driver_provider),
 	user_token_repo: UserTokenRepository = Depends(bot_token_repo_provider)
 ) -> BotTokenResponse | None:
 	if val := await token_repo.get_by_token(bot_update_form.token):
@@ -534,7 +543,7 @@ async def select_bot(
 	body: SelectBotRequest,
 	token_repo: BotTokenRepository = Depends(bot_token_repo_provider),
 	user_token_repo: UserTokenRepository = Depends(get_roblox_token_repo),
-	driver_requests: Firefox = Depends(requests_driver_provider),
+	driver_requests: Firefox = Depends(driver_provider),
 ) -> BotTokenResponse:
 	bot_token, err = await token_repo.select_bot(body.bot_id)
 	if err:
