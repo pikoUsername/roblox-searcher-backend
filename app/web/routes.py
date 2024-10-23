@@ -110,7 +110,7 @@ async def create_token(
 	}
 
 
-def search_players_with_timeouts(client: Firefox, player_name: str, tries: int = 3, wait: int = 5) -> Response | None:
+async def search_players_with_timeouts(client: Firefox, player_name: str, tries: int = 3, wait: int = 5) -> Response | None:
 	if tries == 0:
 		return
 	response = client.request(
@@ -119,7 +119,8 @@ def search_players_with_timeouts(client: Firefox, player_name: str, tries: int =
 	)
 
 	if response.status_code == 429:
-		return search_players_with_timeouts(client, player_name, tries - 1, wait)
+		await asyncio.sleep(wait)
+		return await search_players_with_timeouts(client, player_name, tries - 1, wait)
 
 	return response
 
@@ -202,6 +203,7 @@ async def search_game(
 	redis: Redis = Depends(get_redis),
 	client: ClientSession = Depends(client_provider)
 ) -> list[GameInfo]:
+	logger.info(f"Player id: {player_id}")
 	player_games = await redis.get(f"player_game_{player_id}")
 
 	if player_games:
