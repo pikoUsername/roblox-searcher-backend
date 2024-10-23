@@ -140,7 +140,7 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = search_players_with_timeouts(driver_requests, player_name)
+	response = await search_players_with_timeouts(driver_requests, player_name)
 	if not response:
 		raise HTTPException(detail="Попробуйте потом, слишком много запросов", status_code=429)
 	_data = response.json()
