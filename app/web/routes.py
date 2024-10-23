@@ -3,11 +3,12 @@ import json
 import random
 from datetime import datetime
 from decimal import Decimal
-from typing import Sequence, Annotated
+from typing import Sequence, Annotated, Any
 
 from aiohttp import ClientSession
 from fastapi import FastAPI, APIRouter, Request, Depends, HTTPException, Body
 from redis.asyncio import Redis
+from requests import Response
 from selenium.common import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -109,6 +110,20 @@ async def create_token(
 	}
 
 
+def search_players_with_timeouts(client: Firefox, player_name: str, tries: int = 3, wait: int = 5) -> Response | None:
+	if tries == 0:
+		return
+	response = client.request(
+		"GET",
+		f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10"
+	)
+
+	if response.status_code == 429:
+		return search_players_with_timeouts(client, player_name, tries - 1, wait)
+
+	return response
+
+
 @router.get("/search/player/{player_name}")
 async def search_player(
 	player_name: str,
@@ -124,11 +139,9 @@ async def search_player(
 		return [PlayerData(**v) for v in result]
 
 	logger.info("Sending 'search user' request to roblox api")
-	response = driver_requests.request("GET", f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
-	if response.status_code == 429:
-		logger.error("No search user response")
-		await asyncio.sleep(5.0)
-		response = driver_requests.request("GET", f"https://users.roblox.com/v1/users/search?keyword={player_name}&limit=10")
+	response = search_players_with_timeouts(driver_requests, player_name)
+	if not response:
+		raise HTTPException(detail="Попробуйте потом, слишком много запросов", status_code=429)
 	_data = response.json()
 	logger.info(str(_data)[0:200])
 	users = _data["data"]
