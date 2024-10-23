@@ -72,31 +72,20 @@ def get_driver(settings: "Settings") -> WebDriver:
         opts = webdriver.FirefoxOptions()
         logging.getLogger('seleniumwire').setLevel(logging.CRITICAL)
         opts.add_argument("--disable-web-security")
+        if not settings.debug:
+            opts.add_argument("--headless")
+            opts.add_argument("--disable-gpu")
+
         agent = settings.user_agent
         opts.add_argument(agent)
 
         service = GeckoService(GeckoDriverManager().install())
         driver = Firefox(service=service, options=opts)
+
+        driver.set_window_size(int(settings.window_size.split(',')[0]), int(settings.window_size.split(',')[1]))
     else:
         raise NotImplementedError(f"{settings.browser} is not yet implemented")
 
-    return driver
-
-
-def get_requests_driver(settings: "Settings") -> Firefox:
-    logger.info("Setting up requests firefox browser")
-
-    opts = webdriver.FirefoxOptions()
-    opts.add_argument("--disable-web-security")
-    if not settings.debug:
-        opts.add_argument("--headless")
-        opts.add_argument("--disable-gpu")
-    agent = settings.user_agent
-    opts.add_argument(agent)
-
-    service = GeckoService(GeckoDriverManager().install())
-    driver = Firefox(service=service, options=opts)
-    driver.set_window_size(int(settings.window_size.split(',')[0]), int(settings.window_size.split(',')[1]))
     return driver
 
 

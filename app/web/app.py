@@ -11,13 +11,13 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from app.browser import auth_browser
-from app.services.driver import get_requests_driver, get_driver
+from app.services.driver import get_driver
 from app.settings import get_settings
-from app.web.db import get_db_session, registry
+from app.web.db import registry
 from app.web.logger import configure_logging, LoggingSettings
 from app.web.middlewares.init import load_middlewares
 from app.web.models import load_models
-from app.web.provider import client_provider, get_client, get_roblox_token_repo
+from app.web.provider import get_client, get_roblox_token_repo
 from app.web.routes import load_routes
 from app.web.websettings import get_web_settings
 
